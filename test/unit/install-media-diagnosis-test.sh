@@ -279,8 +279,8 @@ run_dashboard() {
   # A real failure carries the failed phase as well as the current one, and
   # that second summary line is another row the screen has to find space for.
   cat >"$state_file" <<'STATE'
-{"current_phase": "Installing Arch + Omarchy",
- "phases": [{"name": "Installing Arch + Omarchy", "status": "failed",
+{"current_phase": "Installing Arch + Maslow OS",
+ "phases": [{"name": "Installing Arch + Maslow OS", "status": "failed",
              "error": "Pacstrap failed. See /var/log/archinstall.log"}]}
 STATE
   : >"$screen"
@@ -439,7 +439,7 @@ set -e
 if visible_screen | grep -qF "install medium"; then
   fail "an unrelated failure gets no media banner" "$(visible_screen | tail -n 25)"
 fi
-visible_screen | grep -qF "Omarchy installation stopped" ||
+visible_screen | grep -qF "Maslow OS installation stopped" ||
   fail "an unrelated failure still renders the normal failure screen" "$(visible_screen | tail -n 25)"
 pass "an unrelated failure renders the failure screen unchanged"
 

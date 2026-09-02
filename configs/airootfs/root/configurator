@@ -122,7 +122,7 @@ greeter() {
   printf '\033[%d;1H' "$logo_row"
   gum style --foreground 2 --padding "0 0 0 $PADDING_LEFT" "$(<"$LOGO_PATH")"
 
-  tagline="Beautiful, Fun & Agentic Linux by DHH"
+  tagline="An agentic operating system for AI builders and operators"
   tpad=$(((cols - ${#tagline}) / 2)); (( tpad < 0 )) && tpad=0
   printf '\033[%d;%dH%s' "$tagline_row" "$((tpad + 1))" "$tagline"
 
@@ -499,13 +499,13 @@ print_dry_run_files() {
   rm -f user_configuration.json user_credentials.json user_full_name.txt user_email_address.txt user_encrypt_installation.txt
 }
 
-# Shared error screen for every "can't fit Omarchy here" outcome of the
+# Shared error screen for every "can't fit Maslow OS here" outcome of the
 # partition install. Offers the partition tool as the meaningful second
 # action so users have a way to actually fix the situation.
 not_enough_space() {
   local available="${1:-0}"
   step "Not enough free space on $disk"
-  say --foreground 1 "$disk has $(to_gb $available) of usable free space; Omarchy needs at least 32GB."
+  say --foreground 1 "$disk has $(to_gb $available) of usable free space; Maslow OS needs at least 32GB."
   say "Open the partition tool to free at least 32GB on $disk, then try again."
   echo
   if ! gum confirm --affirmative "Back" --negative "Open partition tool" "Return to installation mode?"; then
@@ -539,7 +539,7 @@ run_partition_decide() {
   detected_win_esp=$(detect_windows_esp || true)
   if [[ -n "$detected_win_esp" ]]; then
     say "Found a Windows ESP at $detected_win_esp — leaving it untouched."
-    say "Omarchy will create its own dedicated EFI partition in free space."
+    say "Maslow OS will create its own dedicated EFI partition in free space."
   else
     say "A new EFI partition will be created in free space."
   fi
@@ -619,7 +619,7 @@ run_partition_decide() {
   while true; do
     clear_logo
     echo
-    say "Install Omarchy in the $(to_gb $INSTALL_MAX_B) of free space."
+    say "Install Maslow OS in the $(to_gb $INSTALL_MAX_B) of free space."
 
     case $mode in
       encrypted)
@@ -862,7 +862,7 @@ _EOF_
 }
 
 disk_form() {
-  step "Let's select where to install Omarchy..."
+  step "Let's select where to install Maslow OS..."
 
   # Don't offer the install media as an option (Arch ISO mounts it here)
   local boot_source
@@ -896,8 +896,8 @@ disk_form() {
 
 open_partition_tool() {
   step "Partition tool for $disk"
-  gum style "Create unallocated free space for Omarchy, then write changes and quit."
-  gum style --foreground 8 "Do not create an Omarchy partition here — leave the target area as Free space."
+  gum style "Create unallocated free space for Maslow OS, then write changes and quit."
+  gum style --foreground 8 "Do not create a Maslow OS partition here — leave the target area as Free space."
   gum style --foreground 8 "Tip: free-space install needs at least 32GB unallocated, plus 2GB more if no ESP already exists."
   echo
   gum confirm --affirmative "Open cfdisk" --negative "Back" "Open partition tool for $disk?" || return 0
@@ -942,7 +942,7 @@ install_mode_form() {
   fi
   choices+=("Choose a different disk")
 
-  step "Let's select how to install Omarchy..."
+  step "Let's select how to install Maslow OS..."
   install_mode=$(gum choose --header "Select installation mode on $disk" "${choices[@]}") || abort
 }
 

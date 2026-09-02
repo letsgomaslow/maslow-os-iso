@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+assert_contains() {
+  local file=$1 pattern=$2 description=$3
+  if ! grep -Fq -- "$pattern" "$file"; then
+    printf 'FAIL: %s\n' "$description" >&2
+    exit 1
+  fi
+}
+
+assert_absent() {
+  local file=$1 pattern=$2 description=$3
+  if grep -Fq -- "$pattern" "$file"; then
+    printf 'FAIL: %s\n' "$description" >&2
+    exit 1
+  fi
+}
+
+assert_contains "$root/configs/profiledef.sh" 'iso_name="maslow-os"' 'ISO file name must identify Maslow OS'
+assert_contains "$root/configs/profiledef.sh" 'iso_application="Maslow OS Installer"' 'ISO metadata must identify the installer'
+assert_contains "$root/configs/profiledef.sh" 'arch="x86_64"' 'initial installer must remain x86_64 only'
+assert_contains "$root/configs/grub/grub.cfg" 'menuentry "Maslow OS' 'GRUB must show Maslow OS'
+assert_contains "$root/configs/syslinux/archiso_head.cfg" 'MENU TITLE Maslow OS' 'Syslinux must show Maslow OS'
+assert_contains "$root/configs/efiboot/loader/entries/01-archiso-x86_64-linux.conf" 'title    Maslow OS' 'UEFI loader must show Maslow OS'
+assert_contains "$root/configs/airootfs/root/configurator" 'An agentic operating system for AI builders and operators' 'installer must use Maslow positioning'
+assert_contains "$root/configs/airootfs/usr/local/bin/omarchy-install-dashboard" 'Installing Maslow OS' 'dashboard must show Maslow OS'
+assert_contains "$root/configs/airootfs/root/.automated_script.sh" 'set_maslow_dark_colors' 'live console must use the Maslow palette'
+assert_contains "$root/bin/omarchy-iso-make" 'Maslow OS preview builds require --local-source' 'build must reject an unbranded remote source'
+
+assert_absent "$root/configs/grub/grub.cfg" 'menuentry "Omarchy' 'GRUB must not expose the upstream product name'
+assert_absent "$root/configs/airootfs/usr/local/bin/omarchy-install-dashboard" 'Installing Omarchy' 'dashboard must not expose the upstream product name'
+
+# Compatibility identifiers intentionally remain stable.
+assert_contains "$root/bin/omarchy-iso-make" 'OMARCHY_ISO_REF' 'Omarchy build environment compatibility must remain'
+assert_contains "$root/configs/airootfs/root/.automated_script.sh" 'export OMARCHY_PATH=/usr/share/omarchy' 'runtime paths must remain Omarchy-compatible'
+assert_contains "$root/configs/profiledef.sh" '/usr/local/bin/omarchy-iso-install' 'installer command names must remain Omarchy-compatible'
+
+printf 'Maslow ISO branding checks passed.\n'

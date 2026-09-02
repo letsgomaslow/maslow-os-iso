@@ -28,18 +28,18 @@ if [[ -f /usr/share/omarchy-iso/install-debug ]]; then
   export OMARCHY_INSTALL_DEBUG=1
 fi
 
-# Tokyo Night palette so the live VT matches the installed look.
-set_tokyo_night_colors() {
-  echo -en "\e]P01a1b26"; echo -en "\e]P1f7768e"; echo -en "\e]P29ece6a"
-  echo -en "\e]P3e0af68"; echo -en "\e]P47aa2f7"; echo -en "\e]P5bb9af7"
-  echo -en "\e]P67dcfff"; echo -en "\e]P7a9b1d6"; echo -en "\e]P8414868"
-  echo -en "\e]P9f7768e"; echo -en "\e]PA9ece6a"; echo -en "\e]PBe0af68"
-  echo -en "\e]PC7aa2f7"; echo -en "\e]PDbb9af7"; echo -en "\e]PE7dcfff"
-  echo -en "\e]PFc0caf5"
+# Maslow Dark palette so the live VT matches the installed product.
+set_maslow_dark_colors() {
+  echo -en "\e]P0121d35"; echo -en "\e]P1ee7bb3"; echo -en "\e]P26dc4ad"
+  echo -en "\e]P3f2a23a"; echo -en "\e]P46dc4ad"; echo -en "\e]P5ee7bb3"
+  echo -en "\e]P6d9dee8"; echo -en "\e]P7d9dee8"; echo -en "\e]P88c95a8"
+  echo -en "\e]P9ee7bb3"; echo -en "\e]PA6dc4ad"; echo -en "\e]PBf2a23a"
+  echo -en "\e]PC6dc4ad"; echo -en "\e]PDee7bb3"; echo -en "\e]PEffffff"
+  echo -en "\e]PFffffff"
   echo -en "\033[0m"
   clear
 }
-set_tokyo_night_colors
+set_maslow_dark_colors
 
 mkdir -p /var/log
 touch "$OMARCHY_INSTALL_LOG_FILE"
@@ -51,7 +51,7 @@ export CLICOLOR_FORCE=1
 export FORCE_COLOR=1
 
 if [[ ${OMARCHY_INSTALL_DEBUG:-} == "1" ]]; then
-  echo "=== Omarchy ISO debug build ==="
+  echo "=== Maslow OS ISO debug build ==="
   [[ -f /usr/share/omarchy-iso/build-info ]] && cat /usr/share/omarchy-iso/build-info
   pacman -Q omarchy-settings omarchy-keyring 2>/dev/null || true
   echo "================================"

@@ -54,7 +54,7 @@ child_pid=""
 child_pgid=""
 
 tips=(
-  "Super + Space opens the Omarchy menu for apps, settings, and more"
+  "Super + Space opens the Maslow OS menu for apps, settings, and more"
   "Super + K shows all the key bindings"
   "Super is the Windows or command key on your keyboard"
   "Use Xournal++ to sign PDFs"
@@ -65,13 +65,13 @@ tips=(
   "Super + Ctrl + Print grabs text off the screen with OCR"
   "Print takes a screenshot, Alt + Print records the screen"
   "Set a reminder with Super + Ctrl + R"
-  "Switch themes from Style > Theme in the Omarchy menu"
+  "Switch themes from Style > Theme in the Maslow OS menu"
   "Double-click the menu bar to make it transparent"
   "Run a full Windows VM via Install > Windows in the menu"
   "Super + Ctrl + V opens the clipboard manager"
   "Super + 1 through 0 switches workspaces, add Shift to bring the window"
   "Super + Print picks a color from anywhere on screen"
-  "Keep the system fresh with Update in the Omarchy menu"
+  "Keep the system fresh with Update in the Maslow OS menu"
 )
 
 cleanup() {
@@ -259,7 +259,7 @@ render_logo() {
       printf '\r%s%s%b%s%b\n' "$CLEAR_LINE" "$pad" "$GREEN" "$line" "$RESET"
     done <"$LOGO_PATH"
   else
-    center "${GREEN}Omarchy${RESET}" "$CONTENT_WIDTH"
+    center "${GREEN}Maslow OS${RESET}" "$CONTENT_WIDTH"
   fi
 }
 
@@ -337,7 +337,7 @@ install_progress() {
     "Starting installation")      lo=10  hi=25   tau=5   ;;
     "Preparing live environment") lo=25  hi=50   tau=25  ;;
     "Preparing install target")   lo=50  hi=65   tau=20  ;;
-    "Installing Arch + Omarchy")  lo=65  hi=700  tau=150 pkg_signal=1 ;;
+    "Installing Arch + Maslow OS") lo=65 hi=700 tau=150 pkg_signal=1 ;;
     "Configuring hibernation")    lo=700 hi=720  tau=10  ;;
     "Configuring system")         lo=720 hi=850  tau=120 ;;
     "Staging provisioning")          lo=850 hi=855  tau=5   ;;
@@ -452,7 +452,7 @@ render_dynamic() {
   LAST_PM=$pm
 
   printf '%s%d;1H' "$CSI" "$DYNAMIC_ROW"
-  center "Installing Omarchy" "$CONTENT_WIDTH"
+  center "Installing Maslow OS" "$CONTENT_WIDTH"
   blank_line
   line_at "$CONTENT_WIDTH" $(( (CONTENT_WIDTH - 34) / 2 )) ""
   progress_bar "$pm" 34
@@ -511,7 +511,7 @@ render_finish() {
     printf '%s%s%s%d;1H' "$SHOW_CURSOR" "$CLEAR" "$CSI" "$FINISH_TOP_ROW"
     render_logo
     blank_line
-    center "Installed Omarchy in ${duration}" "$CONTENT_WIDTH"
+    center "Installed Maslow OS in ${duration}" "$CONTENT_WIDTH"
     blank_line
   } >"$TTY_PATH"
 
@@ -696,7 +696,7 @@ render_failure() {
   blank_line
   render_logo
   blank_line
-  center "${RED}Omarchy installation stopped${RESET}" "$CONTENT_WIDTH"
+  center "${RED}Maslow OS installation stopped${RESET}" "$CONTENT_WIDTH"
   center "Installer exited with status $status" "$CONTENT_WIDTH"
 
   render_media_diagnosis "$media_diagnosis"
@@ -712,7 +712,7 @@ render_failure() {
   blank_line
   render_failure_log_tail "$(media_diagnosis_rows "$media_diagnosis")"
   blank_line
-  center "${DIM}Get help at https://omarchy.org/discord${RESET}" "$CONTENT_WIDTH"
+  center "${DIM}Get help at https://github.com/letsgomaslow/maslow-os/issues${RESET}" "$CONTENT_WIDTH"
   blank_line
 }
 

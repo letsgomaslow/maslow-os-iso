@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Preview the shipped Omarchy installer dashboard without building an ISO.
+# Preview the shipped Maslow OS installer dashboard without building an ISO.
 set -euo pipefail
 
 # The dashboard drives the package phase from the target's pacman database, so
@@ -57,7 +57,7 @@ simulate_install() {
     "Starting installation" 0.5
     "Preparing live environment" 0.8
     "Preparing install target" 0.3
-    "Installing Arch + Omarchy" 5.0
+    "Installing Arch + Maslow OS" 5.0
     "Configuring hibernation" 0.4
     "Configuring system" 1.2
     "Finalizing Limine boot" 1.0
@@ -75,7 +75,7 @@ simulate_install() {
     phase_started_at="$EPOCHREALTIME"
     write_simulation_state "$state_file" "$started_at" "$phase_started_at" \
       "$phase" "$target" "$index" "$total"
-    if [[ $phase == "Installing Arch + Omarchy" ]]; then
+    if [[ $phase == "Installing Arch + Maslow OS" ]]; then
       simulate_packages "$db" "$duration" "$PREVIEW_PACKAGES"
     else
       sleep "$duration"
@@ -117,7 +117,7 @@ if [[ -z ${OMARCHY_PATH:-} ]]; then
 fi
 
 if [[ -z ${OMARCHY_PATH:-} || ! -f $OMARCHY_PATH/logo.txt ]]; then
-  echo "Unable to find Omarchy logo.txt; set OMARCHY_PATH to an Omarchy checkout." >&2
+  echo "Unable to find Maslow OS logo.txt; set OMARCHY_PATH to the Maslow OS checkout." >&2
   exit 1
 fi
 

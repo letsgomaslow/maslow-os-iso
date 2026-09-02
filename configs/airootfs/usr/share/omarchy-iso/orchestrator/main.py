@@ -48,7 +48,7 @@ def build_phases(ctx: InstallContext):
     return [
         ("Preparing live environment", prepare_live),
         ("Preparing install target",   prepare_install_target),
-        ("Installing Arch + Omarchy",  arch_install_system),
+        ("Installing Arch + Maslow OS", arch_install_system),
         ("Configuring hibernation",    configure_hibernation),
         ("Configuring system",         run_system_finalizer),
         # Before finalize_limine_boot: the deferred-provisioning cryptkey drop-in and keyfile
@@ -73,7 +73,7 @@ def main() -> int:
         return 2
 
     who = ctx.username or "deferred provisioning (user created at first boot)"
-    info(f"Installing Omarchy for {who} → {ctx.target}")
+    info(f"Installing Maslow OS for {who} → {ctx.target}")
 
     from .phases_impl import (
         boost_cpu_governor,

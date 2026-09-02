@@ -2,11 +2,11 @@
 
 set -e
 
-OMARCHY_ISO_REF="${OMARCHY_ISO_REF:-quattro}"
+OMARCHY_ISO_REF="${OMARCHY_ISO_REF:-local}"
 OMARCHY_MIRROR="${OMARCHY_MIRROR:-stable}"
 
 # Edge, dev, and local-source ISOs install the dev packages explicitly. Those
-# package recipes track the quattro branch. This avoids relying on pacman's
+# package recipes track the Maslow product branch. This avoids relying on pacman's
 # provides=omarchy resolution and shows the real package names being tested in
 # the offline mirror and target install. Every other ref, the default quattro
 # build included, installs the published omarchy packages.

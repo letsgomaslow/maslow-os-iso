@@ -68,6 +68,10 @@ if [[ -n $LOCAL_OMARCHY_PATH ]]; then
   [[ -d $LOCAL_PKGS_PATH ]]    || { echo "Error: pkgs checkout not found at $LOCAL_PKGS_PATH" >&2; exit 1; }
   LOCAL_OMARCHY_PATH=$(realpath "$LOCAL_OMARCHY_PATH")
   LOCAL_PKGS_PATH=$(realpath "$LOCAL_PKGS_PATH")
+else
+  echo "Error: Maslow OS preview builds require --local-source <maslow-os-checkout> <maslow-os-pkgs-checkout>." >&2
+  echo "       No Maslow production package mirror or signed release channel is configured." >&2
+  exit 1
 fi
 
 lint_file_permissions() {
@@ -117,7 +121,7 @@ BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
 BUILD_RELEASE_PATH="$BUILD_ROOT/release"
 mkdir -p "$BUILD_RELEASE_PATH"
 
-OMARCHY_ISO_REF="${OMARCHY_ISO_REF:-quattro}"
+OMARCHY_ISO_REF="${OMARCHY_ISO_REF:-local}"
 OMARCHY_MIRROR="${OMARCHY_MIRROR:-stable}"
 
 DOCKER_ARGS=(
