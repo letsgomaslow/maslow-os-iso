@@ -1142,6 +1142,42 @@ def run_system_finalizer(ctx: InstallContext) -> None:
         _unmask_mkinitcpio_pacman_hooks(ctx, ctx.target, TARGET_DEFERRED_BOOT_HOOKS)
 
 
+def stage_accessibility_preferences(ctx: InstallContext) -> None:
+    """Carry the non-secret installer accessibility choices into the target.
+
+    The runtime's branding repair hook regenerates SDDM's override on every
+    update, so this configuration remains the durable source of truth.
+    """
+    source = Path("/root/maslow-accessibility.conf")
+    if not source.exists():
+        return
+
+    values = {}
+    for raw in source.read_text(encoding="utf-8").splitlines():
+        if "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        if key in {"speech", "large_text", "high_contrast", "reduced_motion"}:
+            values[key] = value
+
+    expected = {"speech", "large_text", "high_contrast", "reduced_motion"}
+    if set(values) != expected or any(value not in {"true", "false"} for value in values.values()):
+        raise RuntimeError("installer accessibility preferences are malformed")
+
+    target_dir = ctx.target / "etc/maslow-os"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_file = target_dir / "accessibility.conf"
+    target_file.write_text(
+        "".join(f"{key}={values[key]}\n" for key in ("speech", "large_text", "high_contrast", "reduced_motion")),
+        encoding="utf-8",
+    )
+    target_file.chmod(0o644)
+    subprocess.run(
+        ["arch-chroot", str(ctx.target), "/usr/bin/omarchy-accessibility-sync"],
+        check=True,
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # stage_provisioning_state: produce the on-disk "provisioning state" the runtime's first-boot
 # setup (omarchy-provision-owner) and factory reset (omarchy-system-factory-reset) consume.

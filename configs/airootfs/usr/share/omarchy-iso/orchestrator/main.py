@@ -33,6 +33,7 @@ def build_phases(ctx: InstallContext):
         prepare_install_target,
         arch_install_system,
         configure_hibernation,
+        stage_accessibility_preferences,
         run_system_finalizer,
         stage_provisioning_state,
         finalize_limine_boot,
@@ -50,6 +51,7 @@ def build_phases(ctx: InstallContext):
         ("Preparing install target",   prepare_install_target),
         ("Installing Arch + Maslow OS", arch_install_system),
         ("Configuring hibernation",    configure_hibernation),
+        ("Applying accessibility",     stage_accessibility_preferences),
         ("Configuring system",         run_system_finalizer),
         # Before finalize_limine_boot: the deferred-provisioning cryptkey drop-in and keyfile
         # must be in place for the final UKI build.

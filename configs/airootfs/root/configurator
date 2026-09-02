@@ -8,6 +8,15 @@ OMARCHY_RUNTIME_PACKAGE="${OMARCHY_RUNTIME_PACKAGE:-omarchy}"
 OMARCHY_SETTINGS_PACKAGE="${OMARCHY_SETTINGS_PACKAGE:-omarchy-settings}"
 
 LOGO_PATH="$OMARCHY_PATH/logo.txt"
+MASLOW_ACCESSIBILITY_CONFIG="${MASLOW_ACCESSIBILITY_CONFIG:-/root/maslow-accessibility.conf}"
+
+CONSOLE_BRAND="${CONSOLE_BRAND:-/usr/share/omarchy-iso/maslow-console-brand.sh}"
+[[ -r $CONSOLE_BRAND ]] || CONSOLE_BRAND="$OMARCHY_PATH/install/provisioning/maslow-console-brand.sh"
+if [[ ! -r $CONSOLE_BRAND ]]; then
+  echo "ERROR: shared Maslow OS console presentation not found at $CONSOLE_BRAND" >&2
+  exit 1
+fi
+source "$CONSOLE_BRAND"
 
 # The setup form — keyboard, account, hostname, and timezone questions, plus the
 # rules their answers are checked against — shared verbatim with the first-boot
@@ -97,7 +106,7 @@ clear_logo() {
 
 # Vertically-centered welcome shown once before the keyboard step — the same
 # frame the deferred-provisioning first boot opens on, so install and first boot
-# bookend the setup identically. Logo, the Omarchy tagline, and a single button,
+# bookend the setup identically. Logo, the Maslow OS tagline, and a single button,
 # centered like the boot logo. No animation.
 greeter() {
   measure_terminal
@@ -122,11 +131,11 @@ greeter() {
   printf '\033[%d;1H' "$logo_row"
   gum style --foreground 2 --padding "0 0 0 $PADDING_LEFT" "$(<"$LOGO_PATH")"
 
-  tagline="An agentic operating system for AI builders and operators"
+  tagline="$MASLOW_PRODUCT_TAGLINE"
   tpad=$(((cols - ${#tagline}) / 2)); (( tpad < 0 )) && tpad=0
   printf '\033[%d;%dH%s' "$tagline_row" "$((tpad + 1))" "$tagline"
 
-  hint="Press Return to Start Install"
+  hint="Press Return to Start Install  •  F5 Accessibility"
   hpad=$(((cols - ${#hint}) / 2)); (( hpad < 0 )) && hpad=0
   printf '\033[%d;%dH\033[2m%s\033[0m' "$hint_row" "$((hpad + 1))" "$hint"
 
@@ -149,24 +158,41 @@ greeter() {
   # Two columns narrower than the console: ttfx centers its text two columns
   # right of plain centering, so a full-width canvas would sit the animated
   # logo a column off the gum-drawn one underneath it.
-  ttfx -i "$LOGO_PATH" \
-    --canvas-width "$((cols > 2 ? cols - 2 : cols))" \
-    --anchor-text c \
-    --frame-rate 60 \
-    --reuse-canvas \
-    --xterm-colors \
-    colorshift \
-    --gradient-stops 2 10 6 10 \
-    --gradient-frames 3 \
-    --cycles 1000 \
-    --final-gradient-stops 2 \
-    </dev/null >/dev/tty 2>/dev/null &
-  anim=$!
+  anim=""
+  if [[ $MASLOW_REDUCED_MOTION != "true" ]]; then
+    ttfx -i "$LOGO_PATH" \
+      --canvas-width "$((cols > 2 ? cols - 2 : cols))" \
+      --anchor-text c \
+      --frame-rate 60 \
+      --reuse-canvas \
+      --xterm-colors \
+      colorshift \
+      --gradient-stops 2 10 6 10 \
+      --gradient-frames 3 \
+      --cycles 1000 \
+      --final-gradient-stops 2 \
+      </dev/null >/dev/tty 2>/dev/null &
+    anim=$!
+  fi
 
-  IFS= read -r _ </dev/tty || true
+  while true; do
+    local key=""
+    IFS= read -rsn1 key </dev/tty || true
+    if [[ -z $key || $key == $'\n' || $key == $'\r' ]]; then
+      break
+    fi
+    if maslow_console_key_is_f5 "$key"; then
+      [[ -z $anim ]] || kill "$anim" 2>/dev/null
+      [[ -z $anim ]] || wait "$anim" 2>/dev/null || true
+      stty sane </dev/tty 2>/dev/null || true
+      printf '\033[0m\033[H\033[2J\033[?25h'
+      maslow_console_accessibility_menu || true
+      return 10
+    fi
+  done
   # Tolerate ttfx's kill signal in `wait` so a future `set -e` here can't abort.
-  kill "$anim" 2>/dev/null
-  wait "$anim" 2>/dev/null || true
+  [[ -z $anim ]] || kill "$anim" 2>/dev/null
+  [[ -z $anim ]] || wait "$anim" 2>/dev/null || true
   # ttfx leaves the tty in raw/no-echo mode when killed; restore it or the gum
   # prompts in the keyboard step that follows silently die.
   stty sane </dev/tty 2>/dev/null || true
@@ -186,6 +212,7 @@ step() {
   clear_logo
   echo
   gum style --padding "0 0 0 $PADDING_LEFT" "$1"
+  maslow_console_speak "$1"
   echo
 }
 
@@ -197,7 +224,13 @@ say() {
 notice() {
   clear_logo
   echo
-  gum spin --spinner "pulse" --title "$1" -- sleep "${2:-2}"
+  maslow_console_speak "$1"
+  if [[ $MASLOW_REDUCED_MOTION == "true" ]]; then
+    gum style --padding "0 0 0 $PADDING_LEFT" "$1"
+    sleep "${2:-2}"
+  else
+    gum spin --spinner "pulse" --title "$1" -- sleep "${2:-2}"
+  fi
   echo
 }
 
@@ -212,7 +245,7 @@ keyboard_form() {
   while true; do
     clear_logo
     echo
-    say "Let's setup your machine..."
+    say "Let’s set up your keyboard"
     say --foreground 8 "Press Ctrl+C to prepare this machine for another owner."
     echo
 
@@ -257,7 +290,7 @@ confirm_prepare_for_another_owner() {
 # operator sets nothing user-specific.
 
 user_form() {
-  step "Let's setup your user account..."
+  step "Let’s set up your account"
 
   # Each prompt reports 0 (set), OMARCHY_FORM_BACK (Esc), or OMARCHY_FORM_SIGNAL
   # (Ctrl+C). Both non-zero cases unwind to user_step, which decides what they
@@ -1039,7 +1072,14 @@ install_target="full_disk"
 # isn't measured against the transient 80-column boot console.
 wait_for_stable_terminal
 
-greeter
+while true; do
+  if greeter; then
+    break
+  else
+    greeter_status=$?
+    (( greeter_status == 10 )) || exit "$greeter_status"
+  fi
+done
 
 keyboard_form
 

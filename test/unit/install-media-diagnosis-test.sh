@@ -265,6 +265,11 @@ screen="$work/screen"
 # overflow, which is exactly the case worth testing.
 omarchy_share="$work/share"
 mkdir -p "$omarchy_share"
+cat >"$omarchy_share/maslow-console-brand.sh" <<'SH'
+MASLOW_REDUCED_MOTION=false
+maslow_console_start_speech() { :; }
+maslow_console_speak() { :; }
+SH
 # 81 columns wide, like the real logo: the dashboard takes its content width
 # from the logo, and a narrow one would truncate every line under test.
 {
@@ -284,7 +289,7 @@ run_dashboard() {
              "error": "Pacstrap failed. See /var/log/archinstall.log"}]}
 STATE
   : >"$screen"
-  script -qefc "stty rows 40 cols 120; PATH='$stubs:$PATH' OMARCHY_PATH='$omarchy_share' OMARCHY_UI_INTERACTIVE=no OMARCHY_UI_FAILURE_ACTION=exit OMARCHY_FAILURE_TAIL_LOG='$install_log' '$DASHBOARD' '$install_log' '$state_file' -- bash -c 'exit 1'" \
+  script -qefc "stty rows 40 cols 120; PATH='$stubs:$PATH' OMARCHY_PATH='$omarchy_share' MASLOW_CONSOLE_BRAND='$omarchy_share/maslow-console-brand.sh' OMARCHY_UI_INTERACTIVE=no OMARCHY_UI_FAILURE_ACTION=exit OMARCHY_FAILURE_TAIL_LOG='$install_log' '$DASHBOARD' '$install_log' '$state_file' -- bash -c 'exit 1'" \
     "$screen" >/dev/null 2>&1
 }
 
