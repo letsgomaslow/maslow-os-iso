@@ -133,6 +133,9 @@ printf '%s\n' "${arch_packages[@]}" >> "$build_cache_dir/packages.x86_64"
 #
 # Anchored so linux-t2 and linux-firmware are untouched.
 sed -i -E '/^(linux|broadcom-wl)$/d' "$build_cache_dir/packages.x86_64"
+# releng's stock-kernel preset would otherwise make the mkinitcpio transaction
+# hook report a false failure for /boot/vmlinuz-linux during every ISO build.
+rm -f "$build_cache_dir/airootfs/etc/mkinitcpio.d/linux.preset"
 
 # Build the offline mirror: everything pacstrap might want during the target
 # install. With --local-source, the omarchy* packages we just built are
