@@ -69,6 +69,12 @@ for pkg in "${packages[@]}"; do
   "
 done
 
+# Pacman installs settings before runtime so /etc/skel is ready for useradd.
+# Reject overlapping non-directory paths now rather than letting a fresh install
+# fail only after partitioning and downloading the entire target package set.
+built_packages=("$work_dir"/*.pkg.tar.zst)
+bash /builder/check-package-file-overlap.sh "${built_packages[@]}"
+
 mkdir -p "$offline_mirror_dir"
 for package_file in "$work_dir"/*.pkg.tar.zst; do
   destination="$offline_mirror_dir/$(basename "$package_file")"

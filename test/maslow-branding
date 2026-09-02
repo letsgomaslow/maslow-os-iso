@@ -33,6 +33,7 @@ assert_contains "$root/configs/airootfs/root/.automated_script.sh" 'maslow_conso
 assert_contains "$root/builder/build-iso.sh" 'maslow-console-brand.sh' 'ISO builds must vendor the shared console presentation'
 assert_contains "$root/builder/build-iso.sh" 'speakup_soft.ko' 'ISO builds must verify the Speakup kernel module'
 assert_contains "$root/builder/build-iso.sh" 'rm -f "$build_cache_dir/airootfs/etc/mkinitcpio.d/linux.preset"' 'ISO builds must remove the unused stock-kernel preset'
+assert_contains "$root/builder/build-omarchy-packages.sh" 'check-package-file-overlap.sh' 'local builds must reject conflicting package ownership'
 assert_contains "$root/configs/grub/grub.cfg" 'timeout=5' 'GRUB must present the standard and spoken choices for five seconds'
 assert_contains "$root/configs/grub/grub.cfg" 'Maslow OS Spoken Installation' 'GRUB must label the spoken installation clearly'
 assert_contains "$root/configs/efiboot/loader/loader.conf" 'timeout 5' 'systemd-boot must present the boot choices for five seconds'
