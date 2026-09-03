@@ -8,7 +8,9 @@
 # stock kernel at the T2 filenames, so the ISO booted stock Arch while every
 # boot entry said linux-t2 and T2 Macs got no keyboard or trackpad.
 #
-# releng ships its own linux.preset for the stock kernel; leave it alone.
+# releng ships its own linux.preset for the stock kernel. The ISO builder removes
+# that preset together with the unused stock kernel so its hook cannot report a
+# missing /boot/vmlinuz-linux.
 
 PRESETS=('archiso')
 

@@ -118,7 +118,7 @@ cp "/tmp/$NODE_FILENAME" "$build_cache_dir/airootfs/opt/packages/"
 # The selected omarchy-settings package is needed here so its post_install hook
 # drops Omarchy's plymouthd.conf into /etc/plymouth before mkarchiso builds the
 # live initramfs.
-arch_packages=(linux-t2 git gum jq openssl plymouth ttfx tzupdate omarchy-keyring "$OMARCHY_SETTINGS_PACKAGE" lvm2 cryptsetup parted)
+arch_packages=(linux-t2 git gum jq openssl plymouth ttfx tzupdate omarchy-keyring "$OMARCHY_SETTINGS_PACKAGE" lvm2 cryptsetup parted espeakup espeak-ng speech-dispatcher)
 printf '%s\n' "${arch_packages[@]}" >> "$build_cache_dir/packages.x86_64"
 
 # The live ISO boots linux-t2 (see airootfs/etc/mkinitcpio.d/linux-t2.preset), so
@@ -133,6 +133,9 @@ printf '%s\n' "${arch_packages[@]}" >> "$build_cache_dir/packages.x86_64"
 #
 # Anchored so linux-t2 and linux-firmware are untouched.
 sed -i -E '/^(linux|broadcom-wl)$/d' "$build_cache_dir/packages.x86_64"
+# releng's stock-kernel preset would otherwise make the mkinitcpio transaction
+# hook report a false failure for /boot/vmlinuz-linux during every ISO build.
+rm -f "$build_cache_dir/airootfs/etc/mkinitcpio.d/linux.preset"
 
 # Build the offline mirror: everything pacstrap might want during the target
 # install. With --local-source, the omarchy* packages we just built are
@@ -141,6 +144,7 @@ sed -i -E '/^(linux|broadcom-wl)$/d' "$build_cache_dir/packages.x86_64"
 if [[ -d /omarchy-source ]]; then
   base_pkg_lists=(/omarchy-source/install/omarchy-base.packages /omarchy-source/install/omarchy-other.packages)
   setup_form=/omarchy-source/install/provisioning/setup-form.sh
+  console_brand=/omarchy-source/install/provisioning/maslow-console-brand.sh
 else
   # Pull the same package lists out of the freshly-downloaded Omarchy runtime
   # package so we don't need a local checkout in the non-local-source path.
@@ -161,7 +165,9 @@ else
   # build here (set -e) with a bare "Not found in archive" instead of the
   # actionable error below.
   bsdtar -xf "$omarchy_pkg" -C /tmp/omarchy-pkglists usr/share/omarchy/install/provisioning/setup-form.sh 2>/dev/null || true
+  bsdtar -xf "$omarchy_pkg" -C /tmp/omarchy-pkglists usr/share/omarchy/install/provisioning/maslow-console-brand.sh 2>/dev/null || true
   setup_form=/tmp/omarchy-pkglists/usr/share/omarchy/install/provisioning/setup-form.sh
+  console_brand=/tmp/omarchy-pkglists/usr/share/omarchy/install/provisioning/maslow-console-brand.sh
 fi
 
 mkdir -p "$build_cache_dir/airootfs/usr/share/omarchy-iso"
@@ -186,6 +192,17 @@ if [[ ! -f $setup_form ]]; then
   exit 1
 fi
 cp "$setup_form" "$build_cache_dir/airootfs/usr/share/omarchy-iso/setup-form.sh"
+
+if [[ ! -f $console_brand ]]; then
+  if [[ -d /omarchy-source ]]; then
+    echo "ERROR: the --local-source checkout ships no install/provisioning/maslow-console-brand.sh" >&2
+  else
+    echo "ERROR: $OMARCHY_RUNTIME_PACKAGE does not ship install/provisioning/maslow-console-brand.sh" >&2
+  fi
+  echo "       The ISO and deferred-owner flow must use one Maslow presentation source." >&2
+  exit 1
+fi
+cp "$console_brand" "$build_cache_dir/airootfs/usr/share/omarchy-iso/maslow-console-brand.sh"
 
 # Collect every package we want available in the offline mirror.
 declare -a all_packages
@@ -348,6 +365,17 @@ cp "$build_cache_dir/pacman-offline.conf" "$build_cache_dir/airootfs/etc/pacman.
 
 # Build the ISO.
 mkarchiso -v -w "$build_cache_dir/work/" -o /out/ "$build_cache_dir/"
+
+# Spoken setup is not shippable without the kernel-side Speakup bridge. Verify
+# the exact live root assembled by mkarchiso instead of assuming the package
+# dependency pulled a compatible module for the kernel this ISO actually boots.
+speakup_module=$(find "$build_cache_dir/work/x86_64/airootfs/usr/lib/modules" \
+  -type f -path '*/kernel/drivers/accessibility/speakup/speakup_soft.ko*' \
+  -print -quit 2>/dev/null)
+if [[ -z $speakup_module ]]; then
+  echo "ERROR: the built live system has no speakup_soft kernel module." >&2
+  exit 1
+fi
 
 # Match host UID/GID on output.
 if [[ -n $HOST_UID && -n $HOST_GID ]]; then

@@ -24,22 +24,21 @@ fi
 export OMARCHY_PATH=/usr/share/omarchy
 export OMARCHY_INSTALL=$OMARCHY_PATH/install
 export OMARCHY_INSTALL_LOG_FILE=/var/log/omarchy-install.log
+export MASLOW_ACCESSIBILITY_CONFIG=/root/maslow-accessibility.conf
 if [[ -f /usr/share/omarchy-iso/install-debug ]]; then
   export OMARCHY_INSTALL_DEBUG=1
 fi
 
-# Maslow Dark palette so the live VT matches the installed product.
-set_maslow_dark_colors() {
-  echo -en "\e]P0121d35"; echo -en "\e]P1ee7bb3"; echo -en "\e]P26dc4ad"
-  echo -en "\e]P3f2a23a"; echo -en "\e]P46dc4ad"; echo -en "\e]P5ee7bb3"
-  echo -en "\e]P6d9dee8"; echo -en "\e]P7d9dee8"; echo -en "\e]P88c95a8"
-  echo -en "\e]P9ee7bb3"; echo -en "\e]PA6dc4ad"; echo -en "\e]PBf2a23a"
-  echo -en "\e]PC6dc4ad"; echo -en "\e]PDee7bb3"; echo -en "\e]PEffffff"
-  echo -en "\e]PFffffff"
-  echo -en "\033[0m"
-  clear
-}
-set_maslow_dark_colors
+console_brand=/usr/share/omarchy-iso/maslow-console-brand.sh
+if [[ ! -r $console_brand ]]; then
+  echo "ERROR: Maslow OS console presentation is missing at $console_brand" >&2
+  exit 1
+fi
+# shellcheck disable=SC1090
+source "$console_brand"
+maslow_accessibility_save
+maslow_console_apply_palette
+maslow_console_start_speech
 
 mkdir -p /var/log
 touch "$OMARCHY_INSTALL_LOG_FILE"

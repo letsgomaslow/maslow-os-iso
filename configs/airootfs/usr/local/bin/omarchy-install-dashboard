@@ -23,6 +23,15 @@ INSTALL_CMD=("$@")
 
 TTY_PATH="${OMARCHY_DASHBOARD_TTY:-/dev/tty}"
 LOGO_PATH="${OMARCHY_PATH:-/usr/share/omarchy}/logo.txt"
+MASLOW_CONSOLE_BRAND="${MASLOW_CONSOLE_BRAND:-/usr/share/omarchy-iso/maslow-console-brand.sh}"
+
+if [[ ! -r $MASLOW_CONSOLE_BRAND ]]; then
+  echo "Maslow OS installer presentation is unavailable." >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "$MASLOW_CONSOLE_BRAND"
+maslow_console_start_speech
 
 # Autoinstall has no one at the keyboard, and every prompt this dashboard owns
 # reads from the TTY, so each would hang forever. Suppress them here rather than
@@ -199,6 +208,7 @@ PROGRESS_PM=10
 NOW=0                  # monotonic seconds, refreshed once per frame
 DASH_T0=0
 PHASE_NAME=""          # last phase this process observed
+SPOKEN_PHASE_NAME=""   # last phase announced by spoken setup
 PHASE_T0=0             # NOW when it was first observed
 PHASE_LO=10            # POS on entry, for an unknown phase with no index
 PKG_DB_DIR=""
@@ -327,6 +337,10 @@ install_progress() {
     PKG_SEEN=0
     PKG_BONUS=0
     PKG_LAST_CHANGE=$NOW
+    if [[ $phase != "$SPOKEN_PHASE_NAME" ]]; then
+      SPOKEN_PHASE_NAME="$phase"
+      maslow_console_speak "$phase"
+    fi
   fi
 
   # Bands in per-mille, plus tau. The tail bands are wide relative to what they
@@ -339,7 +353,8 @@ install_progress() {
     "Preparing install target")   lo=50  hi=65   tau=20  ;;
     "Installing Arch + Maslow OS") lo=65 hi=700 tau=150 pkg_signal=1 ;;
     "Configuring hibernation")    lo=700 hi=720  tau=10  ;;
-    "Configuring system")         lo=720 hi=850  tau=120 ;;
+    "Applying accessibility")     lo=720 hi=735  tau=10  ;;
+    "Configuring system")         lo=735 hi=850  tau=120 ;;
     "Staging provisioning")          lo=850 hi=855  tau=5   ;;
     "Finalizing Limine boot")     lo=855 hi=950  tau=90  ;;
     "Finalizing user")            lo=950 hi=978  tau=30  ;;
@@ -515,7 +530,7 @@ render_finish() {
     blank_line
   } >"$TTY_PATH"
 
-  if [[ -f $LOGO_PATH ]]; then
+  if [[ -f $LOGO_PATH && $MASLOW_REDUCED_MOTION != "true" ]]; then
     # Reuse mode restores a saved cursor before moving up over its input. Save
     # this anchor so the effect redraws the same logo rows shown above.
     printf '%s%d;1H\0337' "$CSI" "$((FINISH_TOP_ROW + LOGO_HEIGHT))" >"$TTY_PATH"
@@ -827,6 +842,7 @@ if (( status == 0 )); then
 fi
 
 if (( status != 0 )); then
+  maslow_console_speak "Maslow OS installation stopped. Status $status."
   failure_status="$status"
   failure_summary=""
   if [[ -f $STATE_FILE ]]; then
@@ -853,6 +869,8 @@ if (( status != 0 )); then
   failure_menu
   exit "$failure_status"
 fi
+
+maslow_console_speak "Maslow OS installation complete."
 
 # Deferred-provisioning installs finish silently and reboot on their own — the
 # owner completes setup (and sees the send-off) at first boot, so the "Installed
