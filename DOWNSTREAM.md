@@ -18,8 +18,8 @@ x86_64; this repository does not claim Apple Silicon or general ARM64 support.
 
 ## Preview build policy
 
-Preview ISOs must be built with `--local-source` against the `maslow` branches
-of `letsgomaslow/maslow-os` and `letsgomaslow/maslow-os-pkgs`. There is no
+Preview ISOs must be built with `--local-source` against the `main` branch of
+`letsgomaslow/maslow-os` and the `maslow` branch of `letsgomaslow/maslow-os-pkgs`. There is no
 Maslow production package mirror or public update channel yet.
 
 Do not sign, upload, or distribute a public binary until provenance, license
