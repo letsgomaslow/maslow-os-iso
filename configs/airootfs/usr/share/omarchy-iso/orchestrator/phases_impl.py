@@ -1344,9 +1344,8 @@ def finalize_limine_boot(ctx: InstallContext) -> None:
         check=False,
         capture_output=True,
     )
-    if "Omarchy" not in limine_conf.read_text():
-        raise RuntimeError(f"{limine_conf} has no Omarchy entry")
-    if "cryptdevice=" in cmdline and "cryptdevice=" not in limine_conf.read_text():
+    limine_conf_text = _require_limine_os_entry(limine_conf, config_text)
+    if "cryptdevice=" in cmdline and "cryptdevice=" not in limine_conf_text:
         raise RuntimeError(f"encrypted install but {limine_conf} has no cryptdevice=")
 
 
@@ -1382,6 +1381,15 @@ def _limine_setting(config_text: str, name: str, fallback: str | None = None) ->
         if match:
             value = _strip_shell_quotes(match.group(1))
     return value
+
+
+def _require_limine_os_entry(limine_conf: Path, config_text: str) -> str:
+    os_name = _limine_setting(config_text, "TARGET_OS_NAME", "Omarchy") or "Omarchy"
+    limine_conf_text = limine_conf.read_text()
+    expected_entry = f"/+{os_name}"
+    if expected_entry not in limine_conf_text.splitlines():
+        raise RuntimeError(f"{limine_conf} has no {os_name} entry")
+    return limine_conf_text
 
 
 def _limine_kernel_cmdline(config_text: str) -> str:
@@ -1689,8 +1697,6 @@ def validate_boot(ctx: InstallContext) -> None:
     if not limine_conf.exists():
         raise RuntimeError(f"{limine_conf} missing")
     limine_conf_text = limine_conf.read_text()
-    if "Omarchy" not in limine_conf_text:
-        raise RuntimeError(f"{limine_conf} has no Omarchy entry")
 
     if ctx.encrypt and "cryptdevice=" not in limine_conf_text:
         raise RuntimeError(f"Encrypted install but {limine_conf} has no cryptdevice=")
@@ -1701,6 +1707,7 @@ def validate_boot(ctx: InstallContext) -> None:
 
     default_limine = ctx.target / "etc" / "default" / "limine"
     config_text = _limine_combined_config_text(ctx, default_limine.read_text())
+    limine_conf_text = _require_limine_os_entry(limine_conf, config_text)
     uki_prefix = _limine_setting(config_text, "CUSTOM_UKI_NAME", "omarchy") or "omarchy"
     kernel = storage.get("kernel") or (ctx.user_configuration.get("kernels") or ["linux"])[0]
 
