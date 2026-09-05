@@ -63,6 +63,7 @@ grep -qF -- '--runtime-tests' "$ROOT/test/integration"
 [[ -x "$ROOT/test/integration.d/desktop-onboarding-test.sh" ]]
 [[ -x "$ROOT/test/integration.d/onboarding-actions-test.sh" ]]
 [[ -x "$ROOT/test/integration.d/bitwarden-display-test.sh" ]]
+[[ -x "$ROOT/test/integration.d/package-database-handoff-test.sh" ]]
 display_scenario="$ROOT/test/integration.d/bitwarden-display-test.sh"
 grep -qF '/usr/lib/electron[0-9]+/electron /usr/lib/bitwarden/app\.asar' "$display_scenario"
 grep -qF 'omarchy-shell shell hide maslow.ai-setup' "$display_scenario"
@@ -104,5 +105,18 @@ if grep -Eq 'pacman[[:space:]]+-S|omarchy-pkg-add|curl|wget|token|password|login
   exit 1
 fi
 
+package_handoff_scenario="$ROOT/test/integration.d/package-database-handoff-test.sh"
+grep -qF 'for repository in core extra multilib omarchy' "$package_handoff_scenario"
+grep -qF 'pacman-conf --repo-list' "$package_handoff_scenario"
+grep -qF '/var/lib/pacman/sync/$repository.db' "$package_handoff_scenario"
+grep -qF 'pacman -Si' "$package_handoff_scenario"
+grep -qF 'omarchy-pkg-add' "$package_handoff_scenario"
+grep -qF 'before omarchy update' "$package_handoff_scenario"
+if grep -Eq 'pacman[[:space:]]+-Sy' "$package_handoff_scenario" || grep -Fq 'omarchy update -y' "$package_handoff_scenario"; then
+  echo "package handoff scenario refreshes databases before the first install" >&2
+  exit 1
+fi
+
 printf 'ok - integration runner supports explicit TCG without changing KVM defaults\n'
 printf 'ok - core preinstall scenario verifies packages and the explicit runtime offline gate without installing or authenticating\n'
+printf 'ok - package handoff scenario installs from seeded online databases before any update\n'
