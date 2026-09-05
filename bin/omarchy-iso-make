@@ -139,6 +139,14 @@ DOCKER_ARGS=(
   -v "$BUILD_ROOT/configs:/configs:ro"
 )
 
+# The image is x86_64-only. Pacman 7's download-user syscall sandbox cannot
+# initialize through Docker Desktop's ARM-to-x86 user-mode emulation, even in
+# a privileged build container. Scope the compatibility switch to that build
+# host; target pacman configuration and signature verification stay intact.
+if [[ $(uname -m) != "x86_64" ]]; then
+  DOCKER_ARGS+=(-e "OMARCHY_BUILD_CPU_EMULATED=1")
+fi
+
 if [[ -n $LOCAL_OMARCHY_PATH ]]; then
   DOCKER_ARGS+=(
     -v "$LOCAL_OMARCHY_PATH:/omarchy-source:ro"

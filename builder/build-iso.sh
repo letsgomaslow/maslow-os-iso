@@ -25,6 +25,13 @@ export OMARCHY_RUNTIME_PACKAGE OMARCHY_SETTINGS_PACKAGE OMARCHY_NVIM_PACKAGE
 source "$(dirname "${BASH_SOURCE[0]}")/local-packages.sh"
 mapfile -t local_packages < <(omarchy_local_packages)
 
+# Pacman 7's DownloadUser seccomp sandbox fails before networking under
+# ARM-to-x86 user-mode emulation. This affects only the disposable build
+# container selected by omarchy-iso-make; package signatures remain enabled.
+if [[ ${OMARCHY_BUILD_CPU_EMULATED:-} == "1" ]]; then
+  sed -i 's/^DownloadUser[[:space:]]*=/# DownloadUser =/' /etc/pacman.conf
+fi
+
 # Packages installed into the Arch container used to build the ISO.
 pacman-key --init
 pacman --noconfirm -Sy archlinux-keyring
