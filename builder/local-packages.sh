@@ -9,7 +9,9 @@ omarchy_local_packages() {
     "${OMARCHY_NVIM_PACKAGE:-omarchy-nvim}" \
     openai-codex-bin \
     claude-code \
-    hermes-agent
+    hermes-agent \
+    maslow-curated-plugins \
+    google-chrome
 }
 
 # Local packages bypass the online resolver, but their external runtime

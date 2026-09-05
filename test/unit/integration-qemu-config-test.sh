@@ -59,6 +59,8 @@ grep -qF 'OMARCHY_INTEGRATION_QEMU_CPU:-host' "$ROOT/test/integration"
 grep -qF 'export OMARCHY_INTEGRATION_OVMF_CODE=' "$ROOT/test/integration"
 grep -qF 'export OMARCHY_INTEGRATION_OVMF_VARS=' "$ROOT/test/integration"
 grep -qF -- '--runtime-tests' "$ROOT/test/integration"
+grep -qF 'app-launcher|meta_l-a|omarchy-app-launcher|tyrsolution.app-launcher' "$ROOT/bin/omarchy-iso-test"
+grep -qF 'omarchy.audio tyrsolution.app-launcher' "$ROOT/bin/omarchy-iso-test"
 [[ -x "$ROOT/test/integration.d/core-preinstalled-test.sh" ]]
 [[ -x "$ROOT/test/integration.d/desktop-onboarding-test.sh" ]]
 [[ -x "$ROOT/test/integration.d/onboarding-actions-test.sh" ]]

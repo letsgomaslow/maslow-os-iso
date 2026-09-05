@@ -407,7 +407,7 @@ guest_layer_absent() {
 }
 
 cleanup_shortcut_state() {
-  ssh_session 'for plugin in omarchy.menu omarchy.emojis omarchy.clipboard omarchy.audio; do
+  ssh_session 'for plugin in omarchy.menu omarchy.emojis omarchy.clipboard omarchy.audio tyrsolution.app-launcher; do
     omarchy-shell shell hide "$plugin" >/dev/null 2>&1 || true
   done
   while read -r address; do
@@ -586,6 +586,7 @@ shortcut_smoke_phase() {
   local name chord namespace plugin
   local shortcuts='menu|meta_l-spc|omarchy-menu|omarchy.menu
 apps-menu|meta_l-alt-spc|omarchy-menu|omarchy.menu
+app-launcher|meta_l-a|omarchy-app-launcher|tyrsolution.app-launcher
 emojis|meta_l-ctrl-e|omarchy-emojis|omarchy.emojis
 clipboard|meta_l-ctrl-v|omarchy-clipboard|omarchy.clipboard
 audio-panel|meta_l-ctrl-a|omarchy-keyboard-panel|omarchy.audio'

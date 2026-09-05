@@ -60,8 +60,10 @@ for pkg in "${packages[@]}"; do
 
   dependency_flag=""
   case "$pkg" in
-    "$OMARCHY_SETTINGS_PACKAGE"|"$OMARCHY_RUNTIME_PACKAGE"|"$OMARCHY_NVIM_PACKAGE")
+    "$OMARCHY_SETTINGS_PACKAGE"|"$OMARCHY_RUNTIME_PACKAGE"|"$OMARCHY_NVIM_PACKAGE"|google-chrome)
       # Legacy runtime recipes depend on the desktop we are assembling.
+      # Google Chrome's runtime dependencies are resolved into the offline
+      # mirror after the locally built artifact is available.
       dependency_flag="--nodeps"
       ;;
   esac
@@ -93,4 +95,11 @@ done
 
 echo
 echo "Built Omarchy packages, placed in $offline_mirror_dir:"
-ls "$offline_mirror_dir"/omarchy*.pkg.tar.zst | sed 's|^|  |'
+for pkg in "${packages[@]}"; do
+  artifacts=("$offline_mirror_dir/$pkg-"*.pkg.tar.zst)
+  if (( ${#artifacts[@]} != 1 )) || [[ ! -f ${artifacts[0]} ]]; then
+    echo "ERROR: expected one completed local artifact for $pkg" >&2
+    exit 1
+  fi
+  printf '  %s\n' "${artifacts[0]}"
+done
