@@ -14,6 +14,14 @@
 #   --memory MB    VM memory (default 8192)
 #   --timeout SECS Install timeout (default 2400)
 #   --no-preview   Do not open the collected screenshots in imv
+#   --qemu-binary PATH QEMU system binary (default: qemu-system-x86_64)
+#   --qemu-img PATH    QEMU image binary (default: qemu-img)
+#   --accel NAME       QEMU accelerator (default: kvm; use tcg explicitly)
+#   --cpu MODEL        QEMU CPU model (default: host; use max with tcg)
+#   --smp COUNT        Guest CPU count (default: host nproc)
+#   --ovmf-code PATH   Read-only x86_64 OVMF code image
+#   --ovmf-vars PATH   Writable x86_64 OVMF vars template
+#   --runtime-tests DIR Maslow OS runtime checkout used by acceptance scenarios
 
 set -euo pipefail
 
@@ -27,6 +35,14 @@ export OMARCHY_INTEGRATION_SSH_PORT=2322
 export OMARCHY_INTEGRATION_MEMORY=8192
 export OMARCHY_INTEGRATION_INSTALL_TIMEOUT=2400
 export OMARCHY_INTEGRATION_NO_PREVIEW=false
+export OMARCHY_INTEGRATION_QEMU_BINARY="${OMARCHY_INTEGRATION_QEMU_BINARY:-qemu-system-x86_64}"
+export OMARCHY_INTEGRATION_QEMU_IMG="${OMARCHY_INTEGRATION_QEMU_IMG:-qemu-img}"
+export OMARCHY_INTEGRATION_QEMU_ACCEL="${OMARCHY_INTEGRATION_QEMU_ACCEL:-kvm}"
+export OMARCHY_INTEGRATION_QEMU_CPU="${OMARCHY_INTEGRATION_QEMU_CPU:-host}"
+export OMARCHY_INTEGRATION_QEMU_SMP="${OMARCHY_INTEGRATION_QEMU_SMP:-$(nproc)}"
+export OMARCHY_INTEGRATION_OVMF_CODE="${OMARCHY_INTEGRATION_OVMF_CODE:-}"
+export OMARCHY_INTEGRATION_OVMF_VARS="${OMARCHY_INTEGRATION_OVMF_VARS:-}"
+export OMARCHY_INTEGRATION_RUNTIME_TESTS="${OMARCHY_INTEGRATION_RUNTIME_TESTS:-}"
 
 while (($#)); do
   case "$1" in
@@ -35,6 +51,14 @@ while (($#)); do
     --port) OMARCHY_INTEGRATION_SSH_PORT="$2"; shift ;;
     --memory) OMARCHY_INTEGRATION_MEMORY="$2"; shift ;;
     --timeout) OMARCHY_INTEGRATION_INSTALL_TIMEOUT="$2"; shift ;;
+    --qemu-binary) OMARCHY_INTEGRATION_QEMU_BINARY="$2"; shift ;;
+    --qemu-img) OMARCHY_INTEGRATION_QEMU_IMG="$2"; shift ;;
+    --accel) OMARCHY_INTEGRATION_QEMU_ACCEL="$2"; shift ;;
+    --cpu) OMARCHY_INTEGRATION_QEMU_CPU="$2"; shift ;;
+    --smp) OMARCHY_INTEGRATION_QEMU_SMP="$2"; shift ;;
+    --ovmf-code) OMARCHY_INTEGRATION_OVMF_CODE="$2"; shift ;;
+    --ovmf-vars) OMARCHY_INTEGRATION_OVMF_VARS="$2"; shift ;;
+    --runtime-tests) OMARCHY_INTEGRATION_RUNTIME_TESTS="$2"; shift ;;
     -*) echo "Unknown option: $1" >&2; exit 1 ;;
     *)
       if [[ $1 == *.iso ]]; then
@@ -67,7 +91,17 @@ else
   done
 fi
 
-omarchy-pkg-add qemu-full edk2-ovmf socat imagemagick tesseract tesseract-data-eng mtools
+if command -v omarchy-pkg-add >/dev/null; then
+  omarchy-pkg-add qemu-full edk2-ovmf socat imagemagick tesseract tesseract-data-eng mtools
+else
+  for command in "$OMARCHY_INTEGRATION_QEMU_BINARY" "$OMARCHY_INTEGRATION_QEMU_IMG" socat magick tesseract mcopy mkfs.vfat; do
+    if [[ $command == */* ]]; then
+      [[ -x $command ]] || { echo "Required integration command is not executable: $command" >&2; exit 1; }
+    else
+      command -v "$command" >/dev/null || { echo "Required integration command is missing: $command" >&2; exit 1; }
+    fi
+  done
+fi
 
 export OMARCHY_INTEGRATION_ISO
 OMARCHY_INTEGRATION_ISO=$(realpath "$ISO")

@@ -23,8 +23,13 @@ GUEST_HOSTNAME="omarchy-test"
 
 SCENARIO="${SCENARIO:-$(basename "${0%-test.sh}")}"
 
-OVMF_CODE="/usr/share/edk2/x64/OVMF_CODE.4m.fd"
-OVMF_VARS_TEMPLATE="/usr/share/edk2/x64/OVMF_VARS.4m.fd"
+OVMF_CODE="${OMARCHY_INTEGRATION_OVMF_CODE:-/usr/share/edk2/x64/OVMF_CODE.4m.fd}"
+OVMF_VARS_TEMPLATE="${OMARCHY_INTEGRATION_OVMF_VARS:-/usr/share/edk2/x64/OVMF_VARS.4m.fd}"
+QEMU_BINARY="${OMARCHY_INTEGRATION_QEMU_BINARY:-qemu-system-x86_64}"
+QEMU_IMG="${OMARCHY_INTEGRATION_QEMU_IMG:-qemu-img}"
+QEMU_ACCEL="${OMARCHY_INTEGRATION_QEMU_ACCEL:-kvm}"
+QEMU_CPU="${OMARCHY_INTEGRATION_QEMU_CPU:-host}"
+QEMU_SMP="${OMARCHY_INTEGRATION_QEMU_SMP:-$(nproc)}"
 
 BASE_DIR="$ROOT/test-runs/$(basename "$ISO" .iso)-integration"
 RUN_DIR="$BASE_DIR/runs/$(date +%Y%m%d-%H%M%S)-$SCENARIO"
@@ -158,33 +163,39 @@ trap cleanup EXIT
 
 start_vm() {
   local disk="$1" serial="$2"
+  local -a qemu_args=(-cpu "$QEMU_CPU")
   shift 2
 
-  qemu-system-x86_64 \
-    -cpu host -enable-kvm -machine q35,accel=kvm \
-    -smp "$(nproc)" \
-    -m "$MEMORY" \
-    -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
-    -drive if=pflash,format=raw,file="$ACTIVE_OVMF" \
-    -drive file="$disk",format=qcow2,if=none,id=drive0 \
-    -device virtio-blk-pci,drive=drive0,bootindex=1 \
-    -device virtio-vga \
-    -display none \
-    -usb -device usb-tablet \
-    -netdev user,id=net0,hostfwd=tcp:127.0.0.1:$SSH_PORT-:22 \
-    -device virtio-net-pci,netdev=net0 \
-    -qmp "unix:$QMP_SOCK,server,nowait" \
-    -serial "file:$serial" \
-    -pidfile "$PIDFILE" \
-    -daemonize \
-    "$@"
+  if [[ $QEMU_ACCEL == "kvm" ]]; then
+    qemu_args+=(-enable-kvm)
+  fi
+  qemu_args+=(
+    -machine "q35,accel=$QEMU_ACCEL"
+    -smp "$QEMU_SMP"
+    -m "$MEMORY"
+    -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE"
+    -drive "if=pflash,format=raw,file=$ACTIVE_OVMF"
+    -drive "file=$disk,format=qcow2,if=none,id=drive0"
+    -device virtio-blk-pci,drive=drive0,bootindex=1
+    -device virtio-vga
+    -display none
+    -usb -device usb-tablet
+    -netdev "user,id=net0,hostfwd=tcp:127.0.0.1:$SSH_PORT-:22"
+    -device virtio-net-pci,netdev=net0
+    -qmp "unix:$QMP_SOCK,server,nowait"
+    -serial "file:$serial"
+    -pidfile "$PIDFILE"
+    -daemonize
+  )
+
+  "$QEMU_BINARY" "${qemu_args[@]}" "$@"
 }
 
 # Boot a throwaway overlay of the installed base. The disk gets a per-run
 # overlay; the firmware vars need the same isolation or NVRAM state would
 # leak between runs.
 start_vm_from_base() {
-  qemu-img create -f qcow2 -b "$BASE_DISK" -F qcow2 "$RUN_DIR/run.qcow2" >/dev/null
+  "$QEMU_IMG" create -f qcow2 -b "$BASE_DISK" -F qcow2 "$RUN_DIR/run.qcow2" >/dev/null
   cp "$BASE_OVMF" "$RUN_DIR/OVMF_VARS.4m.fd"
   ACTIVE_OVMF="$RUN_DIR/OVMF_VARS.4m.fd"
   start_vm "$RUN_DIR/run.qcow2" "$RUN_DIR/serial.log"
@@ -510,7 +521,7 @@ install_phase() {
   # Build under a staging name: the finished base is promoted only after a
   # clean shutdown, so a failed install can never pass for a reusable base.
   rm -f "$BASE_DISK" "$BASE_DISK.building"
-  qemu-img create -f qcow2 "$BASE_DISK.building" 40G >/dev/null
+  "$QEMU_IMG" create -f qcow2 "$BASE_DISK.building" 40G >/dev/null
   cp "$OVMF_VARS_TEMPLATE" "$BASE_OVMF"
   ACTIVE_OVMF="$BASE_OVMF"
 
