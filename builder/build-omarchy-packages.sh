@@ -36,11 +36,8 @@ pacman -Sy --noconfirm
 : "${OMARCHY_SETTINGS_PACKAGE:=omarchy-settings-dev}"
 : "${OMARCHY_NVIM_PACKAGE:=omarchy-nvim}"
 
-packages=(
-  "$OMARCHY_SETTINGS_PACKAGE"
-  "$OMARCHY_RUNTIME_PACKAGE"
-  "$OMARCHY_NVIM_PACKAGE"
-)
+source "$(dirname "${BASH_SOURCE[0]}")/local-packages.sh"
+mapfile -t packages < <(omarchy_local_packages)
 
 # Local-source packages must replace every cached build of the same package,
 # even when the checkout's generated pkgver sorts below a published build.
@@ -61,11 +58,19 @@ for pkg in "${packages[@]}"; do
   cp -a "/omarchy-pkgs/pkgbuilds/$pkg" "$pkg_work"
   chown -R builder:builder "$pkg_work"
 
+  dependency_flag=""
+  case "$pkg" in
+    "$OMARCHY_SETTINGS_PACKAGE"|"$OMARCHY_RUNTIME_PACKAGE"|"$OMARCHY_NVIM_PACKAGE")
+      # Legacy runtime recipes depend on the desktop we are assembling.
+      dependency_flag="--nodeps"
+      ;;
+  esac
+
   su builder -c "
     cd '$pkg_work' &&
     PKGDEST='$work_dir' \
     OMARCHY_SRC=/omarchy-source \
-    makepkg --noconfirm --skippgpcheck --skipchecksums --nodeps -f
+    makepkg --noconfirm $dependency_flag -f
   "
 done
 

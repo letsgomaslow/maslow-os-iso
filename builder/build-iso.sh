@@ -22,6 +22,8 @@ case "$OMARCHY_ISO_REF" in
 esac
 : "${OMARCHY_NVIM_PACKAGE:=omarchy-nvim}"
 export OMARCHY_RUNTIME_PACKAGE OMARCHY_SETTINGS_PACKAGE OMARCHY_NVIM_PACKAGE
+source "$(dirname "${BASH_SOURCE[0]}")/local-packages.sh"
+mapfile -t local_packages < <(omarchy_local_packages)
 
 # Packages installed into the Arch container used to build the ISO.
 pacman-key --init
@@ -30,7 +32,7 @@ pacman --noconfirm -Sy archlinux-keyring
 # so this container can be months behind the mirror it installs from. A plain
 # -Sy install is then a partial upgrade — new packages linked against a glibc
 # the container doesn't have yet.
-pacman --noconfirm -Syu archiso git sudo base-devel jq grub imagemagick neovim nodejs npm tree-sitter-cli
+pacman --noconfirm -Syu archiso git sudo base-devel jq grub imagemagick neovim nodejs npm uv tree-sitter-cli
 
 # Pre-import the omarchy signing key (so pacman trusts our [omarchy] repo
 # during the build without keyserver lookups).
@@ -206,6 +208,10 @@ cp "$console_brand" "$build_cache_dir/airootfs/usr/share/omarchy-iso/maslow-cons
 
 # Collect every package we want available in the offline mirror.
 declare -a all_packages
+local_dependencies=""
+if [[ -n ${LOCAL_OMARCHY_BUILD:-} ]]; then
+  local_dependencies=$(omarchy_local_dependencies "$offline_mirror_dir") || exit 1
+fi
 mapfile -t all_packages < <(
   {
     cat "$build_cache_dir/packages.x86_64"
@@ -214,6 +220,9 @@ mapfile -t all_packages < <(
     # Always include the selected Omarchy packages so the target install can
     # find the runtime and companion packages in the offline mirror.
     printf '%s\n' "$OMARCHY_RUNTIME_PACKAGE" "$OMARCHY_SETTINGS_PACKAGE" "$OMARCHY_NVIM_PACKAGE"
+    if [[ -n $local_dependencies ]]; then
+      printf '%s\n' "$local_dependencies"
+    fi
   } | sort -u
 )
 
@@ -221,12 +230,13 @@ mapfile -t all_packages < <(
 # the mirror; strip them from the pacman -Syw list so it doesn't try to fetch
 # the published versions on top.
 if [[ -n ${LOCAL_OMARCHY_BUILD:-} ]]; then
+  local_exclusions=()
+  for local_package in "${local_packages[@]}"; do
+    local_exclusions+=(-e "$local_package")
+  done
   mapfile -t all_packages < <(
     printf '%s\n' "${all_packages[@]}" |
-      grep -Fxv \
-        -e "$OMARCHY_RUNTIME_PACKAGE" \
-        -e "$OMARCHY_SETTINGS_PACKAGE" \
-        -e "$OMARCHY_NVIM_PACKAGE" || true
+      grep -Fxv "${local_exclusions[@]}" || true
   )
 fi
 
@@ -245,6 +255,14 @@ if ! download_offline_packages; then
   download_offline_packages
 fi
 
+# The target switches from the ISO's [offline] repository to the normal online
+# repositories at the end of system finalization. Seed the synchronized online
+# databases used for this exact build so the first post-install `pacman -S`
+# does not find an empty /var/lib/pacman/sync and report every target missing.
+bash /builder/stage-online-pacman-databases.sh \
+  /tmp/offlinedb \
+  "$build_cache_dir/airootfs/usr/share/omarchy-iso/pacman-sync"
+
 # Resolve the exact filenames chosen by the same synced package databases used
 # for the download. Pruning by this transaction (rather than merely keeping the
 # newest version of every cached package name) removes packages that have left
@@ -262,8 +280,7 @@ mapfile -t required_package_files <<< "$resolved_package_files"
 # checkouts. Add those exact artifacts back to the keep-set after verifying
 # that the local build left exactly one file for each selected package name.
 if [[ -n ${LOCAL_OMARCHY_BUILD:-} ]]; then
-  for local_package_name in \
-    "$OMARCHY_RUNTIME_PACKAGE" "$OMARCHY_SETTINGS_PACKAGE" "$OMARCHY_NVIM_PACKAGE"; do
+  for local_package_name in "${local_packages[@]}"; do
     local_package_file=""
     for candidate in "$offline_mirror_dir/$local_package_name-"*.pkg.tar.*; do
       [[ -f $candidate && $candidate != *.sig ]] || continue

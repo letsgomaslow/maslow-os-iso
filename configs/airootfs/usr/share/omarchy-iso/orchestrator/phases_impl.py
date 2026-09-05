@@ -140,6 +140,9 @@ EARLY_LUAROCKS_PACKAGES = [
     "luarocks",
 ]
 
+ONLINE_PACMAN_REPOSITORIES = ("core", "extra", "multilib", "omarchy")
+ONLINE_PACMAN_SYNC_SOURCE = Path("/usr/share/omarchy-iso/pacman-sync")
+
 
 def _early_bootstrap_packages() -> list[str]:
     return [*EARLY_BOOTSTRAP_BASE_PACKAGES, _omarchy_settings_package()]
@@ -997,10 +1000,11 @@ def _debug_run(ctx: InstallContext, cmd: list[str]) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Target setup phases:
 #  1. point the target at the offline pacman.conf
-#  2. bind-mount the offline mirror + /opt/packages into /mnt for target pacman
+#  2. seed the online databases used after the finalizer restores pacman.conf
+#  3. bind-mount the offline mirror + /opt/packages into /mnt for target pacman
 #     and bundled language runtimes
-#  3. arch-chroot as root → omarchy-apply-system --first-install
-#  4. arch-chroot as user → omarchy-provision-user --first-install
+#  4. arch-chroot as root → omarchy-apply-system --first-install
+#  5. arch-chroot as user → omarchy-provision-user --first-install
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _prepare_target_setup(ctx: InstallContext) -> None:
@@ -1008,6 +1012,7 @@ def _prepare_target_setup(ctx: InstallContext) -> None:
         return
 
     shutil.copy("/etc/pacman.conf", str(ctx.target / "etc" / "pacman.conf"))
+    _seed_target_online_pacman_databases(ctx)
 
     bind_mounts = [
         ("/var/cache/omarchy/mirror/offline", "/var/cache/omarchy/mirror/offline"),
@@ -1024,6 +1029,38 @@ def _prepare_target_setup(ctx: InstallContext) -> None:
             mounted.add(str(target_dst))
 
     ctx.state["target_setup_prepared"] = True
+
+
+def _seed_target_online_pacman_databases(
+    ctx: InstallContext,
+    source: Path = ONLINE_PACMAN_SYNC_SOURCE,
+) -> None:
+    """Seed the target for the offline-to-online pacman handoff.
+
+    Pacstrap only synchronizes the ISO's temporary [offline] repository. The
+    runtime finalizer later restores core/extra/multilib/omarchy in pacman.conf,
+    so those databases must already exist when the installed system boots.
+    They come from the same online synchronization that populated this ISO's
+    offline mirror; no network access or partial upgrade is introduced here.
+    """
+    sources = {
+        repository: source / f"{repository}.db"
+        for repository in ONLINE_PACMAN_REPOSITORIES
+    }
+    missing = [
+        str(path)
+        for path in sources.values()
+        if not path.is_file() or path.stat().st_size == 0
+    ]
+    if missing:
+        raise RuntimeError(
+            "ISO is missing synchronized online pacman databases: " + ", ".join(missing)
+        )
+
+    target = ctx.target / "var/lib/pacman/sync"
+    target.mkdir(parents=True, exist_ok=True)
+    for repository, path in sources.items():
+        shutil.copy2(path, target / f"{repository}.db")
 
 
 def _ensure_finalizer_log_started(ctx: InstallContext) -> tuple[str, int]:
