@@ -289,7 +289,10 @@ run_dashboard() {
              "error": "Pacstrap failed. See /var/log/archinstall.log"}]}
 STATE
   : >"$screen"
-  script -qefc "stty rows 40 cols 120; PATH='$stubs:$PATH' OMARCHY_PATH='$omarchy_share' MASLOW_CONSOLE_BRAND='$omarchy_share/maslow-console-brand.sh' OMARCHY_UI_INTERACTIVE=no OMARCHY_UI_FAILURE_ACTION=exit OMARCHY_FAILURE_TAIL_LOG='$install_log' '$DASHBOARD' '$install_log' '$state_file' -- bash -c 'exit 1'" \
+  # Size the controlling PTY explicitly and fail if terminal ioctls are not
+  # supported (including in an emulated test environment). A failed setup must
+  # not silently exercise the 24-row fallback instead of this 40-row fixture.
+  script -qefc "stty rows 40 cols 120 </dev/tty || exit 90; PATH='$stubs:$PATH' OMARCHY_PATH='$omarchy_share' MASLOW_CONSOLE_BRAND='$omarchy_share/maslow-console-brand.sh' OMARCHY_UI_INTERACTIVE=no OMARCHY_UI_FAILURE_ACTION=exit OMARCHY_FAILURE_TAIL_LOG='$install_log' '$DASHBOARD' '$install_log' '$state_file' -- bash -c 'exit 1'" \
     "$screen" >/dev/null 2>&1
 }
 
@@ -321,6 +324,8 @@ run_dashboard "$dashboard_log"
 dashboard_status=$?
 set -e
 
+(( dashboard_status != 90 )) ||
+  fail "the test environment supports the 40-row PTY fixture" "Terminal-size setup failed; this environment cannot verify the dashboard row budget."
 (( dashboard_status == 1 )) ||
   fail "the dashboard still exits with the installer's status" "exit $dashboard_status"
 visible_screen | grep -qF "The install medium is damaged" ||
