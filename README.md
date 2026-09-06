@@ -20,10 +20,17 @@ Build from the Maslow OS source and package forks using sibling checkouts:
   "../Maslow OS - Packages"
 ```
 
-The installer requires Linux, Docker, and an x86_64 build host. Output goes into
-`./release`. The local-source path builds `omarchy-dev` and
-`omarchy-settings-dev` from the supplied checkouts and bundles them into the
-offline mirror. General ARM64 and Apple Silicon installation are not supported.
+ISO assembly runs in an x86_64 Linux Docker container; a native x86_64 Linux host is preferred. The internal candidate was assembled using Docker Desktop's x86 emulation on Apple Silicon with Bash 5 on the host. The build-only emulation compatibility flag does not change target package signature checks. Output goes into `./release`. The local-source path builds runtime/settings, AI tools, curated plugins, and Chrome from the supplied package recipes and bundles them into the offline mirror. This remains an x86_64 installer, not support for ARM64 or Apple Silicon installation.
+
+## September 5, 2026 native checkpoint
+
+The internal ISO from installer commit `efc2d1fe768df593ec41c93e558e6af021ac9efc` has SHA-256 `ed1ab09f02daea1d28613f8089ebfd02b56e84f2f3ffdbbaa69afd8971490e6d`. Its USB readback matched, and the tester completed a fresh Lenovo ThinkPad installation. App installs worked before any Omarchy update; Chrome default, Maslow dock branding, and Super+A/App Launcher were confirmed. The user later reported running the supported update; detailed post-update/reboot and plugin-update checks remain open.
+
+See the [native acceptance handoff](https://github.com/letsgomaslow/maslow-os/blob/main/docs/handoffs/2026-09-05-verified-usb-native-acceptance.md) for all three built commits, evidence boundaries, and remaining AI, recovery, and performance checks. No public binary release is implied.
+
+Known build defect: image creation completed, but the wrapper exited 1 when its recursive output `chown` encountered protected older artifacts. The final image was independently checksum-verified. Before the next build, scope ownership cleanup to that invocation's exact outputs and test that older protected artifacts are untouched. Do not rebuild this verified ISO solely for this cleanup defect. Systemd command crashes during emulated assembly also require native service-health evidence; do not label the entire wrapper run successful.
+
+### Verify the artifact before media preparation
 
 After building, generate and verify a checksum before testing removable media:
 

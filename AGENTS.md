@@ -38,6 +38,13 @@ The dependency flow is `maslow-os source` -> `maslow-os-pkgs package recipes` ->
 
 # Verification
 
+- Read the runtime repository's `docs/handoffs/2026-09-05-verified-usb-native-acceptance.md` before continuing this candidate. Keep exact built commits separate from later documentation commits and current branch heads.
+- Distinguish focused source tests, image creation, wrapper exit status, checksum/readback verification, and tester-reported native behavior. A valid image does not make a failed build wrapper successful; emulated systemd crashes still need native service-health checks.
+- The recorded recursive `/out/` ownership cleanup defect must be fixed narrowly before the next build: touch only current outputs and test with protected old artifacts. Do not rebuild the verified candidate solely for cleanup or make unrelated output trees writable.
+- Test normal app installs before the first update; never hide a database handoff failure with a manual database refresh. Verify reboot persistence and supported OS/plugin updates separately.
+- Enumerate removable devices afresh, show exact size/model/disk identifier, obtain explicit erase confirmation, verify written bytes, and safely eject. Never reuse the historical `/dev/disk4` identifier without a new check.
+- Keep the Lenovo an acceptance target, not a manually customized fork. Do not add features, dictation, or plugins while closing this candidate's checks. A source push is not authorization to rebuild or publish an ISO.
+
 - Run `git diff --check`, `./test/maslow-branding`, and `./test/all` on Linux.
 - When package ownership changes, build the affected packages together and run `builder/check-package-file-overlap.sh` before installing.
 - Build from clean, explicit sibling checkouts and verify the produced checksum.
