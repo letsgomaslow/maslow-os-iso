@@ -20,6 +20,14 @@ capture_console "postinstall-initial-screen"
 check "Bitwarden desktop package is installed" ssh_guest "pacman -Q bitwarden"
 check "Bitwarden desktop launcher exists" ssh_guest "test -x /usr/bin/bitwarden-desktop && test -f /usr/share/applications/bitwarden.desktop"
 
+check "Maslow Connect package is installed" ssh_guest "pacman -Q maslow-connect"
+check "Maslow Connect CLI is package-owned" ssh_guest "test \"\$(type -P maslow-connect)\" -ef /usr/bin/maslow-connect"
+check "Maslow Connect MCP bridge is package-owned" ssh_guest "test \"\$(type -P maslow-connect-mcp)\" -ef /usr/bin/maslow-connect-mcp"
+check "Maslow Connect launcher and icon are installed" ssh_guest \
+  "test -f /usr/share/applications/maslow-connect.desktop && test -f /usr/share/icons/hicolor/scalable/apps/maslow-connect.svg"
+check "Maslow Connect Codex plugin is installed" ssh_guest \
+  "test -f /usr/share/maslow-connect/codex-plugin/.codex-plugin/plugin.json && test -f /usr/share/maslow-connect/codex-plugin/.mcp.json"
+
 for entry in "codex:openai-codex-bin" "claude:claude-code" "hermes:hermes-agent"; do
   tool=${entry%%:*}
   package=${entry#*:}

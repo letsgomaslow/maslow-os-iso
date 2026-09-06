@@ -18,6 +18,10 @@ if [[ ! -d /omarchy-pkgs ]]; then
   echo "ERROR: /omarchy-pkgs not mounted (set OMARCHY_PKGS_PATH or place ../omarchy-pkgs)" >&2
   exit 1
 fi
+if [[ ! -d /maslow-connect-source ]]; then
+  echo "ERROR: /maslow-connect-source not mounted (pass --local-source with a Maslow Connect checkout)" >&2
+  exit 1
+fi
 
 work_dir=/tmp/omarchy-pkg-build
 rm -rf "$work_dir"
@@ -72,6 +76,7 @@ for pkg in "${packages[@]}"; do
     cd '$pkg_work' &&
     PKGDEST='$work_dir' \
     OMARCHY_SRC=/omarchy-source \
+    MASLOW_CONNECT_SRC=/maslow-connect-source \
     makepkg --noconfirm $dependency_flag -f
   "
 done

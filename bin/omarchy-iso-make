@@ -6,6 +6,7 @@ NO_CACHE=""
 KEEP_PKG_CACHE=""
 LOCAL_OMARCHY_PATH=""
 LOCAL_PKGS_PATH=""
+LOCAL_CONNECT_PATH=""
 while [[ $# -gt 0 ]]; do
   case $1 in
   --no-cache)
@@ -32,13 +33,14 @@ while [[ $# -gt 0 ]]; do
   --local-source)
     LOCAL_OMARCHY_PATH="${2:-}"
     LOCAL_PKGS_PATH="${3:-}"
-    if [[ -z $LOCAL_OMARCHY_PATH || -z $LOCAL_PKGS_PATH ]]; then
-      echo "Error: --local-source requires two args: <omarchy-checkout> <pkgs-checkout>" >&2
+    LOCAL_CONNECT_PATH="${4:-}"
+    if [[ -z $LOCAL_OMARCHY_PATH || -z $LOCAL_PKGS_PATH || -z $LOCAL_CONNECT_PATH ]]; then
+      echo "Error: --local-source requires three args: <maslow-os-checkout> <pkgs-checkout> <maslow-connect-checkout>" >&2
       exit 1
     fi
     OMARCHY_MIRROR=edge
     OMARCHY_ISO_REF=local
-    shift 3
+    shift 4
     ;;
   --dev)
     OMARCHY_ISO_REF=dev
@@ -57,7 +59,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   *)
     echo "Unknown option: $1"
-    echo "Usage: $0 [--no-cache] [--keep-pkg-cache] [--no-boot-offer] [--debug] [--edge] [--dev|--rc] [--local-source <omarchy-checkout> <pkgs-checkout>]"
+    echo "Usage: $0 [--no-cache] [--keep-pkg-cache] [--no-boot-offer] [--debug] [--edge] [--dev|--rc] [--local-source <maslow-os-checkout> <pkgs-checkout> <maslow-connect-checkout>]"
     exit 1
     ;;
   esac
@@ -66,10 +68,12 @@ done
 if [[ -n $LOCAL_OMARCHY_PATH ]]; then
   [[ -d $LOCAL_OMARCHY_PATH ]] || { echo "Error: Omarchy checkout not found at $LOCAL_OMARCHY_PATH" >&2; exit 1; }
   [[ -d $LOCAL_PKGS_PATH ]]    || { echo "Error: pkgs checkout not found at $LOCAL_PKGS_PATH" >&2; exit 1; }
+  [[ -d $LOCAL_CONNECT_PATH ]] || { echo "Error: Maslow Connect checkout not found at $LOCAL_CONNECT_PATH" >&2; exit 1; }
   LOCAL_OMARCHY_PATH=$(realpath "$LOCAL_OMARCHY_PATH")
   LOCAL_PKGS_PATH=$(realpath "$LOCAL_PKGS_PATH")
+  LOCAL_CONNECT_PATH=$(realpath "$LOCAL_CONNECT_PATH")
 else
-  echo "Error: Maslow OS preview builds require --local-source <maslow-os-checkout> <maslow-os-pkgs-checkout>." >&2
+  echo "Error: Maslow OS preview builds require --local-source <maslow-os-checkout> <maslow-os-pkgs-checkout> <maslow-connect-checkout>." >&2
   echo "       No Maslow production package mirror or signed release channel is configured." >&2
   exit 1
 fi
@@ -151,6 +155,7 @@ if [[ -n $LOCAL_OMARCHY_PATH ]]; then
   DOCKER_ARGS+=(
     -v "$LOCAL_OMARCHY_PATH:/omarchy-source:ro"
     -v "$LOCAL_PKGS_PATH:/omarchy-pkgs:ro"
+    -v "$LOCAL_CONNECT_PATH:/maslow-connect-source:ro"
   )
 fi
 

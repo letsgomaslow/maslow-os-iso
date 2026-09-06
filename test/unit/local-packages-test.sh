@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 source "$ROOT/builder/local-packages.sh"
 mapfile -t packages < <(omarchy_local_packages)
-[[ ${#packages[@]} == 8 ]]
-[[ ${packages[*]} == "omarchy-settings-dev omarchy-dev omarchy-nvim openai-codex-bin claude-code hermes-agent maslow-curated-plugins google-chrome" ]]
+[[ ${#packages[@]} == 9 ]]
+[[ ${packages[*]} == "omarchy-settings-dev omarchy-dev omarchy-nvim openai-codex-bin claude-code hermes-agent maslow-connect maslow-curated-plugins google-chrome" ]]
 OMARCHY_RUNTIME_PACKAGE=omarchy OMARCHY_SETTINGS_PACKAGE=omarchy-settings \
   omarchy_local_packages | grep -qx 'omarchy'
 exclusions=()
@@ -21,6 +21,7 @@ printf '%s\n' \
   'depend = nodejs>=22' \
   'depend = glibc' \
   'depend = omarchy-settings-dev' \
+  'depend = maslow-connect' \
   'depend = maslow-curated-plugins' \
   'depend = google-chrome' > "$work/metadata/.PKGINFO"
 for package in "${packages[@]}"; do
@@ -30,6 +31,7 @@ dependencies=$(omarchy_local_dependencies "$work/mirror")
 grep -qx 'nodejs>=22' <<< "$dependencies"
 grep -qx glibc <<< "$dependencies"
 ! grep -q omarchy-settings-dev <<< "$dependencies"
+! grep -q maslow-connect <<< "$dependencies"
 ! grep -q maslow-curated-plugins <<< "$dependencies"
 ! grep -q google-chrome <<< "$dependencies"
 rm "$work/mirror/hermes-agent-1-1-any.pkg.tar.zst"

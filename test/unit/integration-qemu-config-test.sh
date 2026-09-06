@@ -85,9 +85,11 @@ bash -c '[[ $OMARCHY_INTEGRATION_OVMF_CODE == "$1" && $OMARCHY_INTEGRATION_OVMF_
   "$work/OVMF_CODE.fd" "$work/OVMF_VARS.fd"
 
 scenario="$ROOT/test/integration.d/core-preinstalled-test.sh"
-for package in bitwarden openai-codex-bin claude-code hermes-agent; do
+for package in bitwarden openai-codex-bin claude-code hermes-agent maslow-connect; do
   grep -qF "$package" "$scenario"
 done
+grep -qF 'usr/share/maslow-connect/codex-plugin/.codex-plugin/plugin.json' "$scenario"
+grep -qF 'usr/share/maslow-connect/codex-plugin/.mcp.json' "$scenario"
 grep -qF 'pacman -Q' "$scenario"
 grep -qF "timeout 120 '\$tool' --version" "$scenario"
 grep -qF '.authentication == \"unknown\"' "$scenario"

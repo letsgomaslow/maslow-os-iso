@@ -10,6 +10,7 @@ omarchy_local_packages() {
     openai-codex-bin \
     claude-code \
     hermes-agent \
+    maslow-connect \
     maslow-curated-plugins \
     google-chrome
 }
