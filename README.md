@@ -1,18 +1,26 @@
 # Maslow OS ISO
 
-This is the x86_64 installer downstream for Maslow OS, based on Omarchy. It
-retains the Omarchy installer engine, commands, package names, and internal
-paths while presenting the Maslow OS product identity.
+This repository builds the bootable installer for [Maslow OS](https://github.com/letsgomaslow/maslow-os), using the Omarchy installer engine.
 
-There is no public Maslow OS binary release yet. The preview milestone supports
-reproducible local-source builds only. Do not redistribute preview artifacts.
-Public signing and distribution remain gated on Maslow-owned keys, package
-infrastructure, checksums, release automation, update validation, and rollback
-validation. See [DOWNSTREAM.md](DOWNSTREAM.md) and [NOTICE](NOTICE).
+The ISO targets **64-bit Intel and AMD PCs with UEFI**, plus x86_64 virtual machines. It is **not Apple-only**. A fresh installation has been tested on a Lenovo ThinkPad; other hardware still needs testing.
 
-## Creating the x86_64 preview ISO
+Intel Macs can use the ISO in a virtual machine. Direct installation on Mac hardware is not currently supported. ARM64 devices, including Apple Silicon Macs, need a different installer.
 
-Build from the Maslow OS source and package forks using sibling checkouts:
+> **Internal preview:** there is no public Maslow ISO release yet. Do not redistribute preview images.
+
+## How the repositories fit together
+
+- [maslow-os](https://github.com/letsgomaslow/maslow-os) provides the desktop, commands, and defaults; branch `main`.
+- [maslow-os-pkgs](https://github.com/letsgomaslow/maslow-os-pkgs) provides package recipes; branch `maslow`.
+- **This repository** assembles the live system, offline packages, and installer; branch `maslow`.
+
+## Build a test ISO
+
+Read [AGENTS.md](AGENTS.md) and [DOWNSTREAM.md](DOWNSTREAM.md) first. Use clean checkouts and record the exact commit from all three repositories.
+
+Assembly runs in an x86_64 Linux Docker container. A native x86_64 Linux host is preferred. The internal candidate was built through Docker Desktop emulation on Apple Silicon, using Bash 5 on the host. That does not make the resulting ISO an ARM64 installer.
+
+With the three repositories checked out side by side, run from this repository:
 
 ```bash
 ./bin/omarchy-iso-make --local-source \
@@ -20,132 +28,38 @@ Build from the Maslow OS source and package forks using sibling checkouts:
   "../Maslow OS - Packages"
 ```
 
-ISO assembly runs in an x86_64 Linux Docker container; a native x86_64 Linux host is preferred. The internal candidate was assembled using Docker Desktop's x86 emulation on Apple Silicon with Bash 5 on the host. The build-only emulation compatibility flag does not change target package signature checks. Output goes into `./release`. The local-source path builds runtime/settings, AI tools, curated plugins, and Chrome from the supplied package recipes and bundles them into the offline mirror. This remains an x86_64 installer, not support for ARM64 or Apple Silicon installation.
+Output goes into `release/`. The build includes the runtime, settings, AI tools, curated plugins, and Chrome from the supplied recipes.
 
-## September 5, 2026 native checkpoint
+**Known cleanup defect:** the September 5 image was created, but the wrapper failed while changing ownership of older output files. Scope that cleanup to the current build's files before the next build. Do not rebuild the verified ISO just for this defect. See the [candidate record](https://github.com/letsgomaslow/maslow-os/blob/main/docs/handoffs/2026-09-05-verified-usb-native-acceptance.md) for details.
 
-The internal ISO from installer commit `efc2d1fe768df593ec41c93e558e6af021ac9efc` has SHA-256 `ed1ab09f02daea1d28613f8089ebfd02b56e84f2f3ffdbbaa69afd8971490e6d`. Its USB readback matched, and the tester completed a fresh Lenovo ThinkPad installation. App installs worked before any Omarchy update; Chrome default, Maslow dock branding, and Super+A/App Launcher were confirmed. The user later reported running the supported update; detailed post-update/reboot and plugin-update checks remain open.
+## Verify and test
 
-See the [native acceptance handoff](https://github.com/letsgomaslow/maslow-os/blob/main/docs/handoffs/2026-09-05-verified-usb-native-acceptance.md) for all three built commits, evidence boundaries, and remaining AI, recovery, and performance checks. No public binary release is implied.
+1. Verify the exact ISO's SHA-256 checksum.
+2. Use a spare PC or disposable VM. Back up important data first.
+3. Before writing a USB, identify its current model, size, and disk identifier and confirm the erase target. Verify the written data and safely eject it.
+4. Boot the live installer and check that it responds. Confirm the installation disk before proceeding; installation can erase it.
+5. After installation, remove the USB or detach the ISO and boot from the installed disk.
+6. Test app installation **before any update**, then check defaults, AI setup, reboot behavior, and supported OS/plugin updates.
 
-Known build defect: image creation completed, but the wrapper exited 1 when its recursive output `chown` encountered protected older artifacts. The final image was independently checksum-verified. Before the next build, scope ownership cleanup to that invocation's exact outputs and test that older protected artifacts are untouched. Do not rebuild this verified ISO solely for this cleanup defect. Systemd command crashes during emulated assembly also require native service-health evidence; do not label the entire wrapper run successful.
+The Lenovo tester confirmed fresh app installs before updating, Chrome default, the Maslow dock icon, and Super+A opening App Launcher. The user later reported running the system update. Detailed post-update, AI, recovery, and performance checks remain open in the [acceptance checklist](https://github.com/letsgomaslow/maslow-os/blob/main/docs/handoffs/2026-09-05-verified-usb-native-acceptance.md).
 
-### Verify the artifact before media preparation
+Some systemd setup commands crashed during emulated assembly. A checksum or successful desktop login does not replace native service-health checks.
 
-After building, generate and verify a checksum before testing removable media:
-
-```bash
-sha256sum release/maslow-os-*.iso > release/maslow-os.sha256
-sha256sum -c release/maslow-os.sha256
-```
-
-## Autoinstall
-
-The shipped ISO installs itself with no keyboard when it finds its configuration on a second drive. Attach a drive labeled `cidata` alongside the ISO and the installer copies the config off it and skips the configurator; with no such drive, nothing changes and the wizard runs as usual. No rebuild, no extra boot entry.
-
-`cidata` is the cloud-init `NoCloud` label, so Proxmox, libvirt, and Packer already know how to attach one.
-
-### Configuration files
-
-These are the configurator's own output files, so the way to get a starting set is to run one interactive install and copy what it wrote into `/root`.
-
-| File | Required | Purpose |
-|------|----------|---------|
-| `user_configuration.json` | Yes | archinstall config: disk, hostname, timezone, keyboard |
-| `user_credentials.json` | Yes | Username and password hash |
-| `user_full_name.txt` | No | Git full name |
-| `user_email_address.txt` | No | Git email |
-| `user_encrypt_installation.txt` | No | `true` when `user_configuration.json` carries a `disk_encryption` block; defaults to false |
-| `authorized_keys` | No | SSH public keys in sshd's own format, one per line |
-| `tailscale_authkey` | No | Tailscale auth key; the machine joins your tailnet on first boot |
-
-Both required files must be present or the installer falls back to the configurator. Generate the password hash for `user_credentials.json` with `openssl passwd -6 "yourpassword"`.
-
-Encryption itself is configured by the `disk_encryption` block inside `user_configuration.json` — which carries the passphrase in plaintext, so treat a drive built from an encrypted install accordingly. The flag file must match it: it drives the encrypted install's SDDM autologin and the final boot validation, not the encryption.
-
-`authorized_keys` is the same file sshd reads — copy your own or write one key per line:
-
-```
-ssh-ed25519 AAAA... you@host
-```
-
-When `authorized_keys` is present, autoinstall installs it as the user's `~/.ssh/authorized_keys`, enables `sshd`, and adds a `ufw allow ssh` rule — a stock Maslow OS install ships openssh with the service disabled and its firewall opens neither port 22 nor anything else beyond LocalSend. Networking needs nothing extra; NetworkManager is already enabled with DHCP. Password SSH authentication is left at the distro default. An `authorized_keys` with no usable keys fails the install rather than producing a machine nobody can reach.
-
-When `tailscale_authkey` is present (one key, blank lines and `#` comments ignored), the install adds the `tailscale` package from the ISO's bundled mirror — nothing is fetched from the network at install or boot — and stages the join for first boot: the key lands at `/etc/tailscale/authkey` (root-only), `tailscaled` is enabled, ufw allows traffic in on `tailscale0`, and a background unit runs `tailscale up` once the network is actually up, retrying until it succeeds without holding up the boot. After a successful join the key is deleted and the unit disables itself; until then both survive reboots, so a machine installed offline joins whenever it first gets connectivity. The node appears on the tailnet under the configured hostname. Use a reusable, pre-authorized (tagged) key so one drive image serves many machines — or an ephemeral key for disposable VMs.
-
-### Building the drive
+For source checks, run on Linux:
 
 ```bash
-mkdir cidata
-cp user_configuration.json user_credentials.json authorized_keys cidata/
-genisoimage -output cidata.iso -volid cidata -joliet -rock cidata/
+./test/maslow-branding
+./test/all
 ```
 
-### Proxmox example
+These do not replace installing and testing the actual ISO.
 
-```bash
-qm create 101 --name my-omarchy \
-  --bios ovmf --machine q35 --cpu host --cores 4 --memory 8192 \
-  --ostype l26 --scsihw virtio-scsi-single \
-  --efidisk0 local-lvm:0,efitype=4m,pre-enrolled-keys=0 \
-  --scsi0 local-lvm:40,discard=on,iothread=1 \
-  --net0 virtio,bridge=vmbr0 --vga virtio --serial0 socket \
-  --ide2 local:iso/omarchy.iso,media=cdrom \
-  --ide3 local:iso/cidata.iso,media=cdrom \
-  --boot order='scsi0;ide2'
+## Advanced testing and automation
 
-qm start 101
-```
+See the [installer reference](docs/installer-reference.md) for unattended installation, Proxmox examples, graphical acceptance tests, and integration tests. Keep credentials out of Git and shared logs.
 
-Boot order is disk first: the empty disk falls through to the ISO on the first boot, and the installed system boots from disk afterwards. The machine reboots into Maslow OS on its own when the install finishes.
+## Release limits and credits
 
-Encrypted autoinstalls are not fully unattended — the LUKS passphrase prompt still needs someone at the first boot.
+Do not use inherited Omarchy signing or upload commands to publish Maslow images. Public releases require approved Maslow-owned signing, package distribution, and tested update/recovery paths. Chrome redistribution is not approved.
 
-## Testing the ISO
-
-Run `./bin/omarchy-iso-boot [release/omarchy.iso]`.
-
-Run `./test/all` for the fast, VM-free tests under `test/unit/`, which cover cidata autoinstall loading and the orchestrator's phases without needing a built ISO.
-
-To exercise installation alongside existing Windows-style partitions, run
-`./bin/omarchy-iso-test-windows-disk [release/omarchy.iso]`. It creates a
-synthetic disk in `/tmp` with an existing ESP and data partition plus ample
-unallocated space, then offers to start an interactive installation on it. The
-fixture exercises Windows partition preservation but does not contain Windows.
-
-## Acceptance testing the ISO
-
-Run `./bin/omarchy-iso-test [release/omarchy.iso]` to install the ISO into a headless VM by driving the real interactive install flow — the harness reads each screen via QMP screendumps + OCR and answers with virtual keystrokes, so the configurator wizard, install dashboard, reboot prompt, and SDDM login are all exercised exactly as a user would. It then boots the installed system, sends real VM keyboard shortcuts for the primary shell and window-management actions, and runs the in-guest acceptance suite (`test/acceptance` in the omarchy repo). The suite checks session and service health, the complete core-package manifest, user defaults, representative applications, menus, panels, live weather, launchers, visual selectors, notifications, clipboard, and other interactive shell behavior.
-
-Visual checkpoints are saved as `success-<step>.png` or `failure-<step>.png` alongside the serial and install logs in `test-runs/<iso>/runs/<timestamp>/`. Independent test files and applications continue after a failure so one broken surface does not hide the rest of the report. The harness then stops the VM and opens the ordered screenshots in `imv` for quick visual review.
-
-The harness syncs the acceptance suite from `$OMARCHY_PATH` when it is available. The install phase produces a reusable base image, so iterating against another checkout is fast:
-
-```bash
-./bin/omarchy-iso-test release/omarchy.iso --install-only        # once per ISO
-./bin/omarchy-iso-test release/omarchy.iso --reuse-base \
-  --sync-omarchy ../omarchy                                      # fast loop against local tests
-```
-
-Pass `--encrypt` to drive the encrypted install flow (including typing the LUKS passphrase at boot) instead of the unencrypted one. Pass `--no-preview` to collect the same visual artifacts without opening them in `imv` when the run finishes.
-
-## Integration testing the ISO
-
-Scenarios under `test/integration.d/` boot a real ISO install in QEMU and assert on what the running system actually does. The runner installs the ISO once — unattended, from a generated cidata drive — and saves the result as a reusable base image; every scenario then boots a throwaway overlay of that base with its own copy of the firmware vars, so neither disk nor NVRAM state leaks between runs. Shared machinery (VM lifecycle, QMP screendump + OCR console driving, virtual keystrokes, guest SSH, the cidata build) lives in `test/integration.d/base-test.sh`, so a new scenario is one file.
-
-```bash
-./test/integration release/omarchy.iso                   # install once, run all scenarios
-./test/integration release/omarchy.iso --reuse-base      # fast loop against the saved base
-./test/integration release/omarchy.iso factory-reset     # a single named scenario
-```
-
-The first scenario is `factory-reset`: it proves `omarchy-system-factory-reset` hands a machine on without destroying a shared ESP. The installed ESP gets a Windows entry with payload plus a second Linux cloned under a foreign machine-id with its own boot directory and UKIs; a real factory reset is then driven through a guest pty, and the harness asserts the foreign entries survive both the staged reset and first-boot provisioning, that the old Omarchy identity is fully retired, and that the machine reaches first-boot setup unattended.
-
-Artifacts — screenshots, the fixtured/staged/final `limine.conf`, the reset typescript, and the factory-reset log — land under `test-runs/<iso>-integration/runs/<timestamp>-<scenario>/`, and `--no-preview` skips the `imv` review just like the acceptance harness.
-
-## Signing and publishing
-
-The inherited signing, upload, and full-release commands target upstream
-Omarchy infrastructure and are not valid Maslow OS release paths. Do not run
-them for Maslow OS. They remain internal compatibility code until Maslow-owned
-release infrastructure and a reviewed key ceremony are complete.
+See [NOTICE](NOTICE) for upstream attribution and licensing information.
